@@ -4,8 +4,10 @@ import { UpdateTicketDto } from './dto/update-ticket.dto';
 
 @Injectable()
 export class TicketService {
+
+  
   create(createTicketDto: CreateTicketDto) {
-    return 'This action adds a new ticket';
+    return 
   }
 
   findAll() {

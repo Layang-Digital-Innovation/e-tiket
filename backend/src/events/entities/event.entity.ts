@@ -25,22 +25,25 @@ export class Event extends AuditEntity {
   @Column()
   title: string;
 
+  @Column({unique : true})
+  slug : string
+
   @Column('text')
   description: string;
 
   @Column()
   location: string;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamp', name: "start_date" })
   startDate: Date;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamp', name : "end_date" })
   endDate: Date;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, name: "base_price" })
   basePrice: number;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name : "image_url" })
   imageUrl: string;
 
   @Column({
@@ -50,11 +53,8 @@ export class Event extends AuditEntity {
   })
   status: EventStatus;
 
-  @Column({ type: 'uuid' })
-  organizerId: string;
-
-  @ManyToOne(() => User, { eager: true })
-  @JoinColumn({ name: 'organizerId' })
+  @ManyToOne(() => User, { eager: true } )
+  @JoinColumn({ name: 'organizer_id' })
   organizer: User;
 
   @OneToMany(() => TicketCategory, (ticketCategory) => ticketCategory.event)

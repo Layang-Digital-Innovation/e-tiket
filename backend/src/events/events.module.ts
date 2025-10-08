@@ -5,13 +5,12 @@ import { EventsController } from './events.controller';
 import { Event } from './entities/event.entity';
 
 import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
-
-
+import { EventsValidationService } from './validation/validation.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Event, TicketCategory])],
   controllers: [EventsController],
-  providers: [EventsService],
-  exports: [EventsService],
+  providers: [EventsService, EventsValidationService],
+  exports: [EventsService, EventsValidationService],
 })
 export class EventsModule {}

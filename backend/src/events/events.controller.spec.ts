@@ -32,11 +32,11 @@ describe('EventsController', () => {
       status: UserStatus.ACTIVE,
       createdAt: new Date(),
       updatedAt: new Date(),
-      profileImage : '',
-      emailVerified : true,
-      emailVerificationToken : '',
-      resetPasswordExpires : new Date(),
-      resetPasswordToken : ''
+      profileImage: '',
+      emailVerified: true,
+      emailVerificationToken: '',
+      resetPasswordExpires: new Date(),
+      resetPasswordToken: '',
     },
     tickets: [],
     createdAt: new Date(),
@@ -105,7 +105,10 @@ describe('EventsController', () => {
       const result = await controller.create(createEventDto, mockRequest);
 
       expect(result).toEqual(mockEvent);
-      expect(eventsService.create).toHaveBeenCalledWith(createEventDto, mockUser.id);
+      expect(eventsService.create).toHaveBeenCalledWith(
+        createEventDto,
+        mockUser.id,
+      );
     });
   });
 
@@ -113,14 +116,18 @@ describe('EventsController', () => {
     it('should return paginated events without filters', async () => {
       eventsService.findAll.mockResolvedValue(mockPaginatedResponse as any);
 
-      const result = await controller.findAll();  
+      const result = await controller.findAll();
 
       expect(result).toEqual(mockPaginatedResponse);
-      expect(eventsService.findAll).toHaveBeenCalledWith(undefined, undefined, undefined);
+      expect(eventsService.findAll).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        undefined,
+      );
     });
 
     it('should return paginated events with pagination parameters', async () => {
-      eventsService.findAll.mockResolvedValue(mockPaginatedResponse as any);  
+      eventsService.findAll.mockResolvedValue(mockPaginatedResponse as any);
 
       const result = await controller.findAll(1, 10);
 
@@ -134,7 +141,11 @@ describe('EventsController', () => {
       const result = await controller.findAll(1, 10, EventStatus.PUBLISHED);
 
       expect(result).toEqual(mockPaginatedResponse);
-      expect(eventsService.findAll).toHaveBeenCalledWith(1, 10, EventStatus.PUBLISHED);
+      expect(eventsService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        EventStatus.PUBLISHED,
+      );
     });
   });
 
@@ -142,23 +153,35 @@ describe('EventsController', () => {
     it('should return events by organizer', async () => {
       const mockRequest = { user: mockUser };
 
-      eventsService.findByOrganizer.mockResolvedValue(mockPaginatedResponse as any);
+      eventsService.findByOrganizer.mockResolvedValue(
+        mockPaginatedResponse as any,
+      );
 
       const result = await controller.findMyEvents(mockRequest);
 
       expect(result).toEqual(mockPaginatedResponse);
-      expect(eventsService.findByOrganizer).toHaveBeenCalledWith(mockUser.id, undefined, undefined);
+      expect(eventsService.findByOrganizer).toHaveBeenCalledWith(
+        mockUser.id,
+        undefined,
+        undefined,
+      );
     });
 
     it('should return events by organizer with pagination', async () => {
       const mockRequest = { user: mockUser };
 
-      eventsService.findByOrganizer.mockResolvedValue(mockPaginatedResponse as any);
+      eventsService.findByOrganizer.mockResolvedValue(
+        mockPaginatedResponse as any,
+      );
 
       const result = await controller.findMyEvents(mockRequest, 1, 10);
 
       expect(result).toEqual(mockPaginatedResponse);
-      expect(eventsService.findByOrganizer).toHaveBeenCalledWith(mockUser.id, 1, 10);
+      expect(eventsService.findByOrganizer).toHaveBeenCalledWith(
+        mockUser.id,
+        1,
+        10,
+      );
     });
   });
 
@@ -206,7 +229,11 @@ describe('EventsController', () => {
       const result = await controller.remove('1', mockRequest);
 
       expect(result).toBeUndefined();
-      expect(eventsService.remove).toHaveBeenCalledWith('1', mockUser.id, mockUser.role);
+      expect(eventsService.remove).toHaveBeenCalledWith(
+        '1',
+        mockUser.id,
+        mockUser.role,
+      );
     });
   });
 
@@ -217,7 +244,11 @@ describe('EventsController', () => {
 
       eventsService.updateStatus.mockResolvedValue(updatedEvent as any);
 
-      const result = await controller.updateStatus('1', EventStatus.CANCELLED, mockRequest);
+      const result = await controller.updateStatus(
+        '1',
+        EventStatus.CANCELLED,
+        mockRequest,
+      );
 
       expect(result).toEqual(updatedEvent);
       expect(eventsService.updateStatus).toHaveBeenCalledWith(

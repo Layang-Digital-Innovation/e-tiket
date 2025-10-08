@@ -1,3 +1,4 @@
+import { Exclude } from 'class-transformer';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -27,6 +28,7 @@ export class User {
   email: string;
 
   @Column({ nullable: true })
+  @Exclude()
   password: string;
 
   @Column()
@@ -59,21 +61,27 @@ export class User {
   emailVerified: boolean;
 
   @Column({ nullable: true })
+  @Exclude()
   emailVerificationToken: string;
 
   @Column({ nullable: true })
+  @Exclude()
   resetPasswordToken: string;
 
   @Column({ nullable: true })
+  @Exclude()
   resetPasswordExpires: Date;
 
   @Column({ nullable: true })
+  @Exclude()
   oauthProvider: string;
 
   @Column({ nullable: true })
+  @Exclude()
   oauthProviderId: string;
 
   @Column({ nullable: true })
+  @Exclude()
   emailVerificationExpires: Date;
 
   @CreateDateColumn()

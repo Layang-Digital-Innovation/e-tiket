@@ -1,6 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DeleteResult, Repository, SelectQueryBuilder, UpdateResult } from 'typeorm';
+import {
+  DeleteResult,
+  Repository,
+  SelectQueryBuilder,
+  UpdateResult,
+} from 'typeorm';
 import {
   NotFoundException,
   ForbiddenException,
@@ -22,25 +27,25 @@ describe('EventsService', () => {
   futureEndDate.setHours(futureEndDate.getHours() + 8); // 8 hours later
 
   const mockOrganizer = {
-      id: 'organizer-1',
-      email: 'organizer@example.com',
-      firstName: 'John',
-      lastName: 'Organizer',
-      role: UserRole.EVENT_ORGANIZER,
-      password: 'hashed-password',
-      phone: '1234567890',
-      status: UserStatus.ACTIVE,
-      profileImage: 'profile.jpg',
-      emailVerified: true,
-      emailVerificationToken: 'token',
-      resetPasswordToken: 'token',
-      resetPasswordExpires: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      oauthProvider: 'google',
-      oauthProviderId: '22765a47-0dbc-4f2c-bb6c-be4a19c933ea',
-      emailVerificationExpires: new Date(),
-  }
+    id: 'organizer-1',
+    email: 'organizer@example.com',
+    firstName: 'John',
+    lastName: 'Organizer',
+    role: UserRole.EVENT_ORGANIZER,
+    password: 'hashed-password',
+    phone: '1234567890',
+    status: UserStatus.ACTIVE,
+    profileImage: 'profile.jpg',
+    emailVerified: true,
+    emailVerificationToken: 'token',
+    resetPasswordToken: 'token',
+    resetPasswordExpires: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    oauthProvider: 'google',
+    oauthProviderId: '22765a47-0dbc-4f2c-bb6c-be4a19c933ea',
+    emailVerificationExpires: new Date(),
+  };
 
   const mockEvent: Partial<Event> = {
     id: '1',
@@ -56,9 +61,9 @@ describe('EventsService', () => {
     organizer: mockOrganizer,
     createdBy: 'organizer-1',
     updatedBy: 'organizer-1',
-    creator : mockOrganizer,
-    updater : mockOrganizer,
-    ticketCategories : [],
+    creator: mockOrganizer,
+    updater: mockOrganizer,
+    ticketCategories: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -116,7 +121,7 @@ describe('EventsService', () => {
     it('should create an event successfully', async () => {
       const userId = 'organizer-1';
       repository.create.mockReturnValue(mockEvent as Event);
-      repository.save.mockResolvedValue(mockEvent as Event);  
+      repository.save.mockResolvedValue(mockEvent as Event);
 
       const result = await service.create(createEventDto, userId);
 
@@ -180,9 +185,18 @@ describe('EventsService', () => {
       });
 
       expect(repository.createQueryBuilder).toHaveBeenCalledWith('event');
-      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('event.organizer', 'organizer');
-      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith('event.tickets', 'tickets');
-      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith('event.createdAt', 'DESC');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'event.organizer',
+        'organizer',
+      );
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'event.tickets',
+        'tickets',
+      );
+      expect(mockQueryBuilder.orderBy).toHaveBeenCalledWith(
+        'event.createdAt',
+        'DESC',
+      );
     });
 
     it('should filter by status when provided', async () => {
@@ -194,9 +208,12 @@ describe('EventsService', () => {
 
       await service.findAll(1, 10, EventStatus.PUBLISHED);
 
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith('event.status = :status', {
-        status: EventStatus.PUBLISHED,
-      });
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'event.status = :status',
+        {
+          status: EventStatus.PUBLISHED,
+        },
+      );
     });
   });
 
@@ -261,11 +278,21 @@ describe('EventsService', () => {
       repository.update.mockResolvedValue(undefined as unknown as UpdateResult);
       repository.findOne
         .mockResolvedValueOnce(mockEvent as Event)
-        .mockResolvedValueOnce({ ...updatedEvent, id: '1', startDate: new Date(), endDate: new Date() } as Event);
+        .mockResolvedValueOnce({
+          ...updatedEvent,
+          id: '1',
+          startDate: new Date(),
+          endDate: new Date(),
+        } as Event);
 
-      const result = await service.update('1', updateEventDto, 'organizer-1', UserRole.EVENT_ORGANIZER);
+      const result = await service.update(
+        '1',
+        updateEventDto,
+        'organizer-1',
+        UserRole.EVENT_ORGANIZER,
+      );
 
-      expect(result).toEqual(updatedEvent as Event);  
+      expect(result).toEqual(updatedEvent as Event);
       expect(repository.update).toHaveBeenCalledWith('1', {
         ...updateEventDto,
         startDate: undefined,
@@ -282,7 +309,12 @@ describe('EventsService', () => {
         .mockResolvedValueOnce(mockEvent as Event)
         .mockResolvedValueOnce(updatedEvent as Event);
 
-      const result = await service.update('1', updateEventDto, 'different-user', UserRole.ADMIN);
+      const result = await service.update(
+        '1',
+        updateEventDto,
+        'different-user',
+        UserRole.ADMIN,
+      );
 
       expect(result).toEqual(updatedEvent as Event);
     });
@@ -292,7 +324,9 @@ describe('EventsService', () => {
 
       await expect(
         service.update('1', updateEventDto, 'different-user', UserRole.USER),
-      ).rejects.toThrow(new ForbiddenException('You can only update your own events'));
+      ).rejects.toThrow(
+        new ForbiddenException('You can only update your own events'),
+      );
     });
 
     it('should validate dates when updating', async () => {
@@ -309,19 +343,26 @@ describe('EventsService', () => {
       repository.findOne.mockResolvedValue(mockEvent as Event);
 
       await expect(
-        service.update('1', invalidUpdateDto, 'organizer-1', UserRole.EVENT_ORGANIZER),
-      ).rejects.toThrow(new BadRequestException('End date must be after start date'));
+        service.update(
+          '1',
+          invalidUpdateDto,
+          'organizer-1',
+          UserRole.EVENT_ORGANIZER,
+        ),
+      ).rejects.toThrow(
+        new BadRequestException('End date must be after start date'),
+      );
     });
   });
 
   describe('remove', () => {
     it('should remove event when user is the organizer', async () => {
-      repository.findOne.mockResolvedValue(mockEvent as Event); 
+      repository.findOne.mockResolvedValue(mockEvent as Event);
       repository.remove.mockResolvedValue(undefined as unknown as Event);
 
       await service.remove('1', 'organizer-1', UserRole.EVENT_ORGANIZER);
 
-      expect(repository.remove).toHaveBeenCalledWith(mockEvent as Event);           
+      expect(repository.remove).toHaveBeenCalledWith(mockEvent as Event);
     });
 
     it('should remove event when user is admin', async () => {
@@ -338,7 +379,9 @@ describe('EventsService', () => {
 
       await expect(
         service.remove('1', 'different-user', UserRole.USER),
-      ).rejects.toThrow(new ForbiddenException('You can only delete your own events'));
+      ).rejects.toThrow(
+        new ForbiddenException('You can only delete your own events'),
+      );
     });
   });
 
@@ -348,20 +391,36 @@ describe('EventsService', () => {
 
       repository.findOne.mockResolvedValue(mockEvent as Event);
       repository.update.mockResolvedValue(undefined as unknown as UpdateResult);
-      repository.findOne.mockResolvedValueOnce(mockEvent as Event).mockResolvedValueOnce(updatedEvent as Event);
+      repository.findOne
+        .mockResolvedValueOnce(mockEvent as Event)
+        .mockResolvedValueOnce(updatedEvent as Event);
 
-      const result = await service.updateStatus('1', EventStatus.CANCELLED, 'organizer-1', UserRole.EVENT_ORGANIZER);
+      const result = await service.updateStatus(
+        '1',
+        EventStatus.CANCELLED,
+        'organizer-1',
+        UserRole.EVENT_ORGANIZER,
+      );
 
-      expect(result).toEqual(updatedEvent as Event);  
-      expect(repository.update).toHaveBeenCalledWith('1', { status: EventStatus.CANCELLED });
+      expect(result).toEqual(updatedEvent as Event);
+      expect(repository.update).toHaveBeenCalledWith('1', {
+        status: EventStatus.CANCELLED,
+      });
     });
 
     it('should throw ForbiddenException when user is not organizer or admin', async () => {
       repository.findOne.mockResolvedValue(mockEvent as Event);
 
       await expect(
-        service.updateStatus('1', EventStatus.CANCELLED, 'different-user', UserRole.USER),
-      ).rejects.toThrow(new ForbiddenException('You can only update your own events'));
+        service.updateStatus(
+          '1',
+          EventStatus.CANCELLED,
+          'different-user',
+          UserRole.USER,
+        ),
+      ).rejects.toThrow(
+        new ForbiddenException('You can only update your own events'),
+      );
     });
   });
 });

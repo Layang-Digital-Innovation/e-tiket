@@ -15,7 +15,7 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     const userData: Partial<User> = { ...createUserDto };
-    
+
     if (createUserDto.password) {
       userData.password = await bcrypt.hash(createUserDto.password, 10);
     }
@@ -32,6 +32,7 @@ export class UsersService {
         'firstName',
         'lastName',
         'phone',
+        'profileImage',
         'role',
         'status',
         'createdAt',
@@ -48,6 +49,7 @@ export class UsersService {
         'firstName',
         'lastName',
         'phone',
+        'profileImage',
         'role',
         'status',
         'createdAt',
@@ -100,7 +102,10 @@ export class UsersService {
     return this.findOne(id);
   }
 
-  async findByOAuthProvider(provider: string, providerId: string): Promise<User | null> {
+  async findByOAuthProvider(
+    provider: string,
+    providerId: string,
+  ): Promise<User | null> {
     return this.usersRepository.findOne({
       where: {
         oauthProvider: provider,
@@ -109,8 +114,17 @@ export class UsersService {
     });
   }
 
-  async linkOAuthAccount(userId: string, oauthData: { oauthProvider: string; oauthProviderId: string }): Promise<User | null> {
+  async linkOAuthAccount(
+    userId: string,
+    oauthData: {
+      oauthProvider: string;
+      oauthProviderId: string;
+      profileImage?: string;
+      emailVerified?: boolean;
+    },
+  ): Promise<User | null> {
     await this.usersRepository.update(userId, oauthData);
+    await this.usersRepository.save({ id: userId });
     return this.usersRepository.findOne({ where: { id: userId } });
   }
 
@@ -144,7 +158,13 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { id: userId } });
   }
 
-  async updateEmailVerificationToken(userId: string, tokenData: { emailVerificationToken: string; emailVerificationExpires: Date }): Promise<void> {
+  async updateEmailVerificationToken(
+    userId: string,
+    tokenData: {
+      emailVerificationToken: string;
+      emailVerificationExpires: Date;
+    },
+  ): Promise<void> {
     await this.usersRepository.update(userId, tokenData);
   }
 
@@ -154,7 +174,10 @@ export class UsersService {
     });
   }
 
-  async updatePasswordResetToken(userId: string, tokenData: { resetPasswordToken: string; resetPasswordExpires: Date }): Promise<void> {
+  async updatePasswordResetToken(
+    userId: string,
+    tokenData: { resetPasswordToken: string; resetPasswordExpires: Date },
+  ): Promise<void> {
     await this.usersRepository.update(userId, tokenData);
   }
 

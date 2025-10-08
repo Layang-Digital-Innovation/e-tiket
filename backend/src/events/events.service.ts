@@ -10,6 +10,7 @@ import { Event, EventStatus } from './entities/event.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { UserRole } from '../users/entities/user.entity';
+import slugify from 'slugify';
 
 @Injectable()
 export class EventsService {
@@ -31,11 +32,25 @@ export class EventsService {
       throw new BadRequestException('Start date cannot be in the past');
     }
 
+    // Generate base slug
+    let baseSlug = slugify(createEventDto.title, {
+      lower: true,
+      strict: true,
+      trim: true,
+    });
+
+    let slug = baseSlug;
+    let counter = 1;
+    while (await this.eventsRepository.findOne({ where: { slug } })) {
+      slug = `${baseSlug}-${counter++}`;
+    }
+
     const event = this.eventsRepository.create({
       ...createEventDto,
       startDate,
       endDate,
-      organizerId: userId,
+      slug,
+      organizer: { id: userId },
     });
 
     return this.eventsRepository.save(event);
@@ -64,6 +79,16 @@ export class EventsService {
     return { events, total, page, limit };
   }
 
+  async findBySlug(slug: string) {
+    const event = await this.eventsRepository.findOne({
+      where: { slug },
+      relations: ['organizer', 'ticketCategories'],
+    });
+    if (!event)
+      throw new NotFoundException(`Event with slug "${slug}" not found`);
+    return event;
+  }
+
   async findOne(id: string): Promise<Event> {
     const event = await this.eventsRepository.findOne({
       where: { id },
@@ -83,7 +108,7 @@ export class EventsService {
     limit: number = 10,
   ): Promise<{ events: Event[]; total: number; page: number; limit: number }> {
     const [events, total] = await this.eventsRepository.findAndCount({
-      where: { organizerId },
+      where: { organizer: { id: organizerId } },
       relations: ['ticketCategories'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
@@ -102,7 +127,7 @@ export class EventsService {
     const event = await this.findOne(id);
 
     // Check authorization
-    if (userRole !== UserRole.ADMIN && event.organizerId !== userId) {
+    if (userRole !== UserRole.ADMIN && event.organizer.id !== userId) {
       throw new ForbiddenException('You can only update your own events');
     }
 
@@ -137,7 +162,7 @@ export class EventsService {
     const event = await this.findOne(id);
 
     // Check authorization
-    if (userRole !== UserRole.ADMIN && event.organizerId !== userId) {
+    if (userRole !== UserRole.ADMIN && event.organizer.id !== userId) {
       throw new ForbiddenException('You can only delete your own events');
     }
 
@@ -153,11 +178,11 @@ export class EventsService {
     const event = await this.findOne(id);
 
     // Check authorization
-    if (userRole !== UserRole.ADMIN && event.organizerId !== userId) {
+    if (userRole !== UserRole.ADMIN && event.organizer.id !== userId) {
       throw new ForbiddenException('You can only update your own events');
     }
 
-    await this.eventsRepository.update(id, { 
+    await this.eventsRepository.update(id, {
       status,
     });
     return this.findOne(id);
