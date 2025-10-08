@@ -57,14 +57,22 @@ export class EventsController {
     return this.eventsService.findByOrganizer(req.user.id, page, limit);
   }
 
-  @Get(':id')
+  @Get(':slug')
+  @ResponseMessage('Event retrieved successfully')
+  findBySlug(@Param('slug') slug: string) {
+    return this.eventsService.findBySlug(slug);
+  }
+
+  @Get('id/:id')
+  @ResponseMessage('Event retrieved successfully')
   findOne(@Param('id') id: string) {
     return this.eventsService.findOne(id);
   }
 
-  @Patch(':id')
+  @Patch('id/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EVENT_ORGANIZER, UserRole.USER)
+  @ResponseMessage('Event updated successfully')
   update(
     @Param('id') id: string,
     @Body(ValidationPipe) updateEventDto: UpdateEventDto,
@@ -78,16 +86,18 @@ export class EventsController {
     );
   }
 
-  @Delete(':id')
+  @Delete('id/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EVENT_ORGANIZER, UserRole.USER)
+  @ResponseMessage('Event deleted successfully')
   remove(@Param('id') id: string, @Request() req) {
     return this.eventsService.remove(id, req.user.id, req.user.role);
   }
 
-  @Patch(':id/status')
+  @Patch('status/id/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EVENT_ORGANIZER, UserRole.USER)
+  @ResponseMessage('Event status updated successfully')
   updateStatus(
     @Param('id') id: string,
     @Body('status') status: EventStatus,

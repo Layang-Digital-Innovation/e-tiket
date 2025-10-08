@@ -1,4 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { AuditEntity } from "src/common/entities/audit.entity";
+import { Event } from "src/events/entities/event.entity";
+import { TicketCategory } from "src/ticket_categories/entities/ticket_category.entity";
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 
 
 export enum WristbandStatus {
@@ -9,15 +12,17 @@ export enum WristbandStatus {
 
 
 @Entity("wristband")
-export class Wristband {
+export class Wristband extends AuditEntity {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({type: 'uuid'})
-    eventId: string;
+   @ManyToOne(() => Event, { onDelete: 'CASCADE' })
+@JoinColumn({ name: 'event_id' })
+event: Event;
 
-    @Column({type: 'uuid'})
-    categoryId: string;
+@ManyToOne(() => TicketCategory, { onDelete: 'CASCADE' })
+@JoinColumn({ name: 'category_id' })
+category: TicketCategory;
 
     @Column({nullable: true})
     code? : string;

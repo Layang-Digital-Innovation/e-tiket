@@ -20,4 +20,5 @@ export default new DataSource({
   subscribers : [AuditSubscriber],
   synchronize: configService.get<string>('NODE_ENV') === 'development',
   logging: true,
+  dropSchema : true
 });

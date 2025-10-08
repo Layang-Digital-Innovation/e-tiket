@@ -37,14 +37,17 @@ export class EventsWithCommonResponseController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EVENT_ORGANIZER, UserRole.USER)
-  async create(@Body(ValidationPipe) createEventDto: CreateEventDto, @Request() req) {
+  async create(
+    @Body(ValidationPipe) createEventDto: CreateEventDto,
+    @Request() req,
+  ) {
     const event = await this.eventsService.create(createEventDto, req.user.id);
-    
+
     // Manual response formatting (opsional, interceptor akan handle otomatis)
     return ApiResponseDto.success(
       event,
       'Event created successfully',
-      HttpStatus.CREATED
+      HttpStatus.CREATED,
     );
   }
 
@@ -65,8 +68,12 @@ export class EventsWithCommonResponseController {
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
   ) {
-    const result = await this.eventsService.findByOrganizer(req.user.id, page, limit);
-    
+    const result = await this.eventsService.findByOrganizer(
+      req.user.id,
+      page,
+      limit,
+    );
+
     // Contoh manual formatting untuk pagination
     return ApiResponseDto.paginated(
       result.events,
@@ -76,18 +83,15 @@ export class EventsWithCommonResponseController {
         total: result.total,
         totalPages: Math.ceil(result.total / result.limit),
       },
-      'My events retrieved successfully'
+      'My events retrieved successfully',
     );
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const event = await this.eventsService.findOne(id);
-    
-    return ApiResponseDto.success(
-      event,
-      'Event retrieved successfully'
-    );
+
+    return ApiResponseDto.success(event, 'Event retrieved successfully');
   }
 
   @Patch(':id')
@@ -104,11 +108,8 @@ export class EventsWithCommonResponseController {
       req.user.id,
       req.user.role,
     );
-    
-    return ApiResponseDto.success(
-      event,
-      'Event updated successfully'
-    );
+
+    return ApiResponseDto.success(event, 'Event updated successfully');
   }
 
   @Delete(':id')
@@ -116,11 +117,11 @@ export class EventsWithCommonResponseController {
   @Roles(UserRole.ADMIN, UserRole.EVENT_ORGANIZER, UserRole.USER)
   async remove(@Param('id') id: string, @Request() req) {
     await this.eventsService.remove(id, req.user.id, req.user.role);
-    
+
     return ApiResponseDto.success(
       null,
       'Event deleted successfully',
-      HttpStatus.NO_CONTENT
+      HttpStatus.NO_CONTENT,
     );
   }
 
@@ -138,10 +139,7 @@ export class EventsWithCommonResponseController {
       req.user.id,
       req.user.role,
     );
-    
-    return ApiResponseDto.success(
-      event,
-      'Event status updated successfully'
-    );
+
+    return ApiResponseDto.success(event, 'Event status updated successfully');
   }
 }

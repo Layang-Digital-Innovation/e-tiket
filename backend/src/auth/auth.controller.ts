@@ -9,6 +9,7 @@ import {
   Query,
   Res,
   HttpStatus,
+  HttpCode,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
@@ -21,14 +22,19 @@ import { CreateAdminDto } from './dto/create-admin.dto';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
+import { ResponseMessage } from 'src/common/decorators/response_message.decorator';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
+import { UserRole } from 'src/users/entities/user.entity';
 
 @Controller('api/auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   @UseGuards(LocalAuthGuard)
-  async login(@Request() req, @Body() loginDto: LoginDto) {
+  async login(@Request() req) {
     
     const token = await this.authService.login(req.user);
     return ApiResponseDto.success(
@@ -44,6 +50,7 @@ export class AuthController {
   }
 
   @Get('profile')
+  @ResponseMessage('User profile retrieved successfully')
   @UseGuards(JwtAuthGuard)
   async getProfile(@Request() req) {
     return this.authService.getProfile(req.user.id);
@@ -87,12 +94,16 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(@Request() req, @Res() res: Response) {
+
+
     const token = this.authService.login(req.user);
     // Redirect to frontend with token
     res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${(await token).access_token}`);
   }
 
   @Post('create-admin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   async createAdmin(@Body(ValidationPipe) createAdminDto: CreateAdminDto) {
     return this.authService.createAdmin(createAdminDto);
   }

@@ -16,6 +16,8 @@ import { TicketCategoriesModule } from './ticket_categories/ticket_categories.mo
 import { OrderModule } from './order/order.module';
 import { OrderItemModule } from './order_item/order_item.module';
 import { WristbandModule } from './wristband/wristband.module';
+import { AttendeesModule } from './attendees/attendees.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { WristbandModule } from './wristband/wristband.module';
     OrderModule,
     OrderItemModule,
     WristbandModule,
+    AttendeesModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

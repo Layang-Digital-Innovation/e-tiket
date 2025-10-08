@@ -2,7 +2,6 @@ import { Injectable, ConflictException, BadRequestException, NotFoundException }
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 import { JwtPayload } from './strategies/jwt.strategy';
@@ -102,6 +101,7 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
+      profileImage: user.profileImage,
       role: user.role,
       status: user.status,
       createdAt: user.createdAt,
@@ -123,10 +123,12 @@ export class AuthService {
     user = await this.usersService.findByEmail(oauthUser.email);
 
     if (user) {
-      // Link OAuth account to existing user
+      // Link OAuth account to existing user and update profile image
       const linkedUser = await this.usersService.linkOAuthAccount(user.id, {
         oauthProvider: oauthUser.oauthProvider,
         oauthProviderId: oauthUser.oauthProviderId,
+        profileImage: oauthUser.profileImage,
+        emailVerified: oauthUser.emailVerified,
       });
       
       if (!linkedUser) {
