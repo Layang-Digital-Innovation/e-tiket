@@ -5,8 +5,7 @@ import { BeforeInsert, Column, Entity, OneToMany, PrimaryGeneratedColumn } from 
 export enum OrderStatus {
     PAID = 'paid',
     PENDING = 'pending',
-    FAILED = 'failed',
-    CANCELLED = 'cancelled'
+    EXPIRED = 'expired'
 }
 
 
@@ -56,5 +55,17 @@ export class Order {
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order, {cascade : true})
   orderItems : OrderItem[];
+
+  @Column({name : "payment_id", nullable : true})
+  paymentId? : string;
+
+  @Column({name : "payment_method", nullable : true})
+  paymentMethod? : string;
+
+  @Column({name : "payment_channel", nullable : true})
+  paymentChannel? : string;
+
+  @Column({name : "paid_at", nullable : true})
+  paidAt? : Date;
 
 }
