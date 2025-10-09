@@ -12,6 +12,20 @@ export class WristbandController {
     return this.wristbandService.create(createWristbandDto);
   }
 
+  @Post('generate')
+  generateStock(@Body() data: { maxCapacity: number; eventId: string; categoryId: string }) {
+    return this.wristbandService.generateWristbandByMaxCapacity(
+      data.maxCapacity,
+      data.eventId,
+      data.categoryId,
+    );
+  }
+
+  @Post('upload')
+  uploadData(@Body() data: { wristbands: CreateWristbandDto[] }) {
+    return this.wristbandService.uploadWristbandData(data.wristbands);
+  }
+
   @Get()
   findAll() {
     return this.wristbandService.findAll();

@@ -1,32 +1,59 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CreateWristbandDto } from './dto/create-wristband.dto';
 import { UpdateWristbandDto } from './dto/update-wristband.dto';
 import { Wristband, WristbandStatus } from './entities/wristband.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 
 @Injectable()
 export class WristbandService {
+  private readonly logger = new Logger(WristbandService.name);
 
   constructor(
-    @InjectRepository(Wristband) private wristbandRepository: Repository<Wristband>
+    @InjectRepository(Wristband) private wristbandRepository: Repository<Wristband>,
+    @InjectQueue('wristband') private wristbandQueue: Queue
   ) {}
 
   create(createWristbandDto: CreateWristbandDto) {
     return this.wristbandRepository.save(createWristbandDto);
   }
 
-
-  generateWristbandByMaxCapacity(maxCapacity: number, eventId: string, categoryId: string) {
-    const wristbands: CreateWristbandDto[] = [];
-    for (let i = 0; i < maxCapacity; i++) {
-       wristbands.push({
-        eventId,
-        categoryId,
-        status: WristbandStatus.UNUSED,
-       })
-    }
-    return this.wristbandRepository.save(wristbands);
+  async generateWristbandByMaxCapacity(maxCapacity: number, eventId: string, categoryId: string) {
+    this.logger.log(`Queueing generation of ${maxCapacity} wristbands for event ${eventId}, category ${categoryId}`);
+    
+    // Tambahkan job ke queue
+    const job = await this.wristbandQueue.add('generate-stock', {
+      maxCapacity,
+      eventId,
+      categoryId
+    }, {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 1000 }
+    });
+    
+    return {
+      message: `Generating ${maxCapacity} wristbands has been queued successfully`,
+      jobId: job.id
+    };
+  }
+  
+  async uploadWristbandData(wristbands: CreateWristbandDto[]) {
+    this.logger.log(`Queueing upload of ${wristbands.length} wristbands`);
+    
+    // Tambahkan job ke queue
+    const job = await this.wristbandQueue.add('upload-data', {
+      wristbands
+    }, {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 1000 }
+    });
+    
+    return {
+      message: `Uploading ${wristbands.length} wristbands has been queued successfully`,
+      jobId: job.id
+    };
   }
 
 
