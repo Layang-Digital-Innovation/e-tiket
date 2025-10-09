@@ -18,6 +18,7 @@ import { WristbandModule } from './wristband/wristband.module';
 import { AttendeesModule } from './attendees/attendees.module';
 import { PaymentModule } from './payment/payment.module';
 import { BullModule } from '@nestjs/bull';
+import { RedeemModule } from './redeem/redeem.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { BullModule } from '@nestjs/bull';
     WristbandModule,
     AttendeesModule,
     PaymentModule,
+    RedeemModule,
   ],
   controllers: [AppController],
   providers: [AppService],

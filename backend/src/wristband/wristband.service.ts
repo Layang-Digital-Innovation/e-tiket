@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CreateWristbandDto } from './dto/create-wristband.dto';
 import { UpdateWristbandDto } from './dto/update-wristband.dto';
 import { Wristband, WristbandStatus } from './entities/wristband.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 
@@ -64,6 +64,23 @@ export class WristbandService {
 
   findOne(id: string) {
     return this.wristbandRepository.findOne({where: {id}});
+  }
+
+   async findOneByCode(wristbandCode: string, manager?: EntityManager) {
+    const repository = manager ? manager.getRepository(Wristband) : this.wristbandRepository;
+
+    const wristband = await repository.findOne({
+      where: { wristbandCode },
+      relations: ['event', 'category'],
+    });
+
+    if (!wristband) throw new NotFoundException('Wristband not found');
+    return wristband;
+  }
+
+  async saveChange(wristband: Wristband, manager?: EntityManager) {
+    const repository = manager ? manager.getRepository(Wristband) : this.wristbandRepository;
+    return repository.save(wristband);
   }
 
   update(id: string, updateWristbandDto: UpdateWristbandDto) {

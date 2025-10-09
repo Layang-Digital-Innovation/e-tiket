@@ -31,9 +31,9 @@ export class WristbandController {
     return this.wristbandService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.wristbandService.findOne(id);
+  @Get(':code')
+  findOne(@Param('code') code: string) {
+    return this.wristbandService.findOneByCode(code);
   }
 
   @Patch(':id')
