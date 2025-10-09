@@ -12,6 +12,7 @@ import { OrderItem } from 'src/order_item/entities/order_item.entity';
 import { Ticket } from 'src/ticket/entities/ticket.entity';
 import { Attendee } from 'src/attendees/entities/attendee.entity';
 import { CallbackSuccessDto } from './dto/callback-success.dto';
+import { PaymentService } from 'src/payment/payment.service';
 
 @Injectable()
 export class OrderService {
@@ -21,6 +22,7 @@ export class OrderService {
     private readonly ticketCategoryService : TicketCategoriesService,
     private readonly ticketCategoryValidationService : TicketCategoriesValidationService,
     private readonly eventValidationService: EventsValidationService,
+    private readonly paymentService : PaymentService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -40,6 +42,7 @@ export class OrderService {
       identityNumber: createOrderDto.buyerIdentityNumber,
       status: OrderStatus.PENDING,
       totalAmount: 0,
+      orderItems: [],
     });
 
     const savedOrder = await queryRunner.manager.save(order);
@@ -79,12 +82,39 @@ export class OrderService {
         });
         await queryRunner.manager.save(attendee);
       }
+
+      savedOrder.orderItems.push(orderItem);
     }
 
     savedOrder.totalAmount = totalAmount;
+   
     await queryRunner.manager.save(savedOrder);
 
+    Logger.log("SAVED ORDER ", savedOrder)
+
+
+          const invoice = await this.paymentService.createInvoice({
+      externalId: savedOrder.transactionCode,
+      amount: totalAmount,
+      buyerName: createOrderDto.buyerFullName,
+      buyerPhoneNumber: createOrderDto.buyerPhoneNumber,
+      items : savedOrder.orderItems.map((item) => ({
+        name: item.ticketCategory.name,
+        quantity: item.quantity,
+        price: item.unitPrice,
+      })),
+      payerEmail: createOrderDto.buyerEmail,
+      description: "Pembelian E Tiket",
+      successRedirectUrl: 'https://www.google.com',
+      failedRedirectUrl:  'https://www.google.com',
+    });
+
+
     await queryRunner.commitTransaction();
+
+     
+
+    Logger.log("Invoice :", invoice)
 
     const finalOrder = await this.orderRepository.findOne({
       where: { id: savedOrder.id },
@@ -95,7 +125,10 @@ export class OrderService {
       ],
     });
 
-    return finalOrder
+    return {
+      ...finalOrder,
+      paymentUrl : invoice.invoice_url,
+    }
   } catch (error) {
     await queryRunner.rollbackTransaction();
     throw error;
@@ -156,6 +189,8 @@ export class OrderService {
 
     // 4️⃣ Commit transaksi
     await queryRunner.commitTransaction();
+
+
 
     // 5️⃣ Fetch ulang order lengkap dengan tiket + attendee
     const finalOrder = await this.dataSource.getRepository(Order).findOne({
