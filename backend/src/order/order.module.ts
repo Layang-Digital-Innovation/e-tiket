@@ -8,6 +8,7 @@ import { TicketModule } from 'src/ticket/ticket.module';
 import { TicketCategoriesModule } from 'src/ticket_categories/ticket_categories.module';
 import { EventsModule } from 'src/events/events.module';
 import { AttendeesModule } from 'src/attendees/attendees.module';
+import { PaymentModule } from 'src/payment/payment.module';
 
 @Module({
   imports: [
@@ -16,7 +17,8 @@ import { AttendeesModule } from 'src/attendees/attendees.module';
     TicketModule,
     TicketCategoriesModule,
     EventsModule,
-    AttendeesModule
+    AttendeesModule,
+    PaymentModule
   ],
   controllers: [OrderController],
   providers: [OrderService],
