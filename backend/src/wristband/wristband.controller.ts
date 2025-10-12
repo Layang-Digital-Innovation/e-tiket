@@ -31,6 +31,22 @@ export class WristbandController {
     return this.wristbandService.findAll();
   }
 
+  @Get('assigned')
+  findAssignedWristband() {
+    return this.wristbandService.findAssignedWristband();
+  }
+
+  @Get('assigned/:categoryId')
+  findAssignedWristbandByCategory(@Param('categoryId') categoryId: string) {
+    return this.wristbandService.findAssignedWristbandByCategory(categoryId);
+  }
+
+  @Get('checked-in/:eventSlug')
+  findCheckedInWristbandByEvent(@Param('eventSlug') eventSlug: string) {
+    return this.wristbandService.findCheckedInWristbandByEvent(eventSlug);
+  }
+
+
   @Get(':code')
   findOne(@Param('code') code: string) {
     return this.wristbandService.findOneByCode(code);

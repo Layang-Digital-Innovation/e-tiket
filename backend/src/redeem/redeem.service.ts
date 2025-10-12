@@ -34,8 +34,7 @@ export class RedeemService {
       ticket.assignedWristband = wristband;
 
       wristband.status = WristbandStatus.ASSIGNED;
-      wristband.assignedTicketId = ticket.id;
-      wristband.assignedTicketCode = ticket.ticketCode;
+      wristband.assignedTicket = ticket;
       wristband.assignedAt = new Date();
 
       await this.ticketService.saveChange(ticket, manager);

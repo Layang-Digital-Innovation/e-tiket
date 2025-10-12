@@ -84,6 +84,12 @@ export class CallbackSuccessDto {
   payment_destination: string;
 
   @IsOptional()
+  payment_details: {
+    receipt_id: string;
+    source : string;
+  }
+
+  @IsOptional()
   @IsOptional()
   adjusted_received_amount: string;
 

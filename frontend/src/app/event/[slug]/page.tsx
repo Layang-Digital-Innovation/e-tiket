@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import Header from '@/components/header';
 
-export default function PublicEventPage({ params }: { params: { id: string } }) {
+export default function PublicEventPage({ params }: { params: { slug: string } }) {
   const [event] = useState({
-    id: params.id,
+      slug: params.slug,
     title: 'Konser Musik Jazz',
     description: 'Nikmati malam yang penuh dengan alunan musik jazz dari musisi terbaik Indonesia dan internasional. Event ini akan menghadirkan pengalaman musik yang tak terlupakan dengan suasana yang intim dan berkelas.',
     longDescription: `
@@ -76,7 +76,7 @@ export default function PublicEventPage({ params }: { params: { id: string } }) 
         ],
       },
     ],
-  });
+  }); 
 
   const [selectedTickets, setSelectedTickets] = useState<{[key: string]: number}>({});
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);

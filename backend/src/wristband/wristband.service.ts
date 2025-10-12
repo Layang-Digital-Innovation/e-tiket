@@ -62,6 +62,34 @@ export class WristbandService {
     return this.wristbandRepository.find();
   }
 
+  findAssignedWristband() {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.ASSIGNED },
+      relations: ['event', 'category'],
+    });
+  }
+
+  findAssignedWristbandByCategory(categoryId: string) {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.ASSIGNED, category: { id: categoryId } },
+      relations: ['event', 'category'],
+    });
+  }
+
+  findCheckedInWristbandByCategory(categoryId: string) {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.CHECKED_IN, category: { id: categoryId } },
+      relations: ['event', 'category', 'ticket'],
+    });
+  }
+
+  findCheckedInWristbandByEvent(eventSlug: string) {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.CHECKED_IN, event: { slug: eventSlug } },
+      relations: ['event', 'category', 'ticket'],
+    });
+  }
+
   findOne(id: string) {
     return this.wristbandRepository.findOne({where: {id}});
   }

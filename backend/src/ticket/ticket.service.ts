@@ -9,7 +9,7 @@ import { EntityManager, Repository } from 'typeorm';
 export class TicketService {
   constructor(
     @InjectRepository(Ticket)
-    private readonly ticketRepository: Repository<Ticket>,
+    private readonly ticketRepository: Repository<Ticket>
   ) {}
 
   async findOneByCode(ticketCode: string, manager?: EntityManager) {
@@ -66,4 +66,8 @@ export class TicketService {
   remove(id: string) {
     return this.ticketRepository.delete(id);
   }
+
+
+
+
 }

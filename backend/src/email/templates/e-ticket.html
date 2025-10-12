@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Tiket Event Anda</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+            background-color: #fafafa;
+            padding: 24px;
+            line-height: 1.6;
+            color: #09090b;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e4e4e7;
+            overflow: hidden;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background-color: #ffffff;
+            padding: 32px 24px 24px;
+            border-bottom: 1px solid #e4e4e7;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #09090b;
+            margin-bottom: 4px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            color: #71717a;
+        }
+        
+        .content {
+            padding: 32px 24px;
+        }
+        
+        .greeting {
+            margin-bottom: 32px;
+        }
+        
+        .greeting p {
+            font-size: 14px;
+            color: #52525b;
+            line-height: 1.6;
+        }
+        
+        .greeting strong {
+            font-weight: 600;
+            color: #09090b;
+        }
+        
+        .order-summary {
+            background-color: #fafafa;
+            border: 1px solid #e4e4e7;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 32px;
+        }
+        
+        .order-summary h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #09090b;
+            margin-bottom: 16px;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .summary-label {
+            font-size: 12px;
+            color: #71717a;
+            font-weight: 500;
+        }
+        
+        .summary-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #09090b;
+        }
+        
+        .divider {
+            height: 1px;
+            background-color: #e4e4e7;
+            margin: 32px 0;
+        }
+        
+        .ticket-card {
+            border: 1px solid #e4e4e7;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            background-color: #ffffff;
+        }
+        
+        .ticket-badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 500;
+            color: #09090b;
+            background-color: #fafafa;
+            border: 1px solid #e4e4e7;
+            padding: 4px 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+        }
+        
+        .ticket-header {
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e4e4e7;
+            margin-bottom: 20px;
+        }
+        
+        .event-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #09090b;
+            margin-bottom: 8px;
+        }
+        
+        .ticket-code {
+            font-size: 13px;
+            color: #71717a;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background-color: #f0fdf4;
+            color: #15803d;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .status-badge::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            background-color: #16a34a;
+            border-radius: 50%;
+        }
+        
+        .event-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin: 20px 0;
+        }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .detail-label {
+            font-size: 12px;
+            color: #71717a;
+            font-weight: 500;
+        }
+        
+        .detail-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #09090b;
+        }
+        
+        .qr-section {
+            background-color: #fafafa;
+            border: 1px solid #e4e4e7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .qr-section h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #09090b;
+            margin-bottom: 4px;
+        }
+        
+        .qr-section p {
+            font-size: 12px;
+            color: #71717a;
+            margin-bottom: 16px;
+        }
+        
+        .qr-code {
+            width: 180px;
+            height: 180px;
+            background-color: white;
+            margin: 0 auto;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e4e4e7;
+            padding: 12px;
+        }
+        
+        .qr-code img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .attendee-section {
+            background-color: #fafafa;
+            border: 1px solid #e4e4e7;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .attendee-section h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #09090b;
+            margin-bottom: 16px;
+        }
+        
+        .info-grid {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e4e4e7;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-size: 13px;
+            color: #71717a;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            font-size: 13px;
+            color: #09090b;
+            font-weight: 500;
+            text-align: right;
+        }
+        
+        .alert {
+            background-color: #fffbeb;
+            border: 1px solid #fef3c7;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 24px 0;
+        }
+        
+        .alert h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #854d0e;
+            margin-bottom: 8px;
+        }
+        
+        .alert p {
+            font-size: 13px;
+            color: #78716c;
+            line-height: 1.6;
+        }
+        
+        .alert strong {
+            color: #854d0e;
+            font-weight: 600;
+        }
+        
+        .alert-destructive {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+        }
+        
+        .alert-destructive h4 {
+            color: #991b1b;
+        }
+        
+        .alert-destructive ul {
+            margin-left: 16px;
+            color: #7f1d1d;
+            font-size: 13px;
+        }
+        
+        .alert-destructive li {
+            margin: 6px 0;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 32px 0;
+        }
+        
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background-color: #09090b;
+            color: #fafafa;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            border: 1px solid #09090b;
+            transition: all 0.2s;
+        }
+        
+        .button:hover {
+            background-color: #18181b;
+        }
+        
+        .button-outline {
+            background-color: #ffffff;
+            color: #09090b;
+            border: 1px solid #e4e4e7;
+        }
+        
+        .button-outline:hover {
+            background-color: #fafafa;
+        }
+        
+        .footer {
+            background-color: #fafafa;
+            padding: 24px;
+            text-align: center;
+            border-top: 1px solid #e4e4e7;
+        }
+        
+        .footer p {
+            font-size: 13px;
+            color: #71717a;
+            margin: 4px 0;
+        }
+        
+        .footer strong {
+            color: #09090b;
+            font-weight: 600;
+        }
+        
+        .footer-links {
+            margin: 16px 0;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+        
+        .footer-links a {
+            color: #09090b;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+        
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+            }
+            
+            .button-group, .footer {
+                display: none;
+            }
+            
+            .container {
+                border: none;
+                box-shadow: none;
+            }
+        }
+        
+        @media (max-width: 640px) {
+            body {
+                padding: 16px;
+            }
+            
+            .content {
+                padding: 24px 16px;
+            }
+            
+            .header {
+                padding: 24px 16px 20px;
+            }
+            
+            .summary-grid,
+            .event-details {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .button {
+                width: 100%;
+            }
+            
+            .info-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            
+            .info-value {
+                text-align: left;
+            }
+            
+            .footer-links {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>E-Tiket Event</h1>
+            <p>Konfirmasi Pembelian Tiket</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <!-- Greeting -->
+            <div class="greeting">
+                <p>Halo <strong>{{fullName}}</strong>,</p>
+                <p style="margin-top: 8px;">Terima kasih atas pembelian tiket Anda. Berikut adalah detail pesanan dan tiket Anda.</p>
+            </div>
+            
+            <!-- Order Summary -->
+            <div class="order-summary">
+                <h3>Ringkasan Pesanan</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Kode Transaksi</span>
+                        <span class="summary-value">{{transactionCode}}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Status</span>
+                        <span class="summary-value">{{status}}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Total Pembayaran</span>
+                        <span class="summary-value">Rp {{totalAmount}}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Metode Pembayaran</span>
+                        <span class="summary-value">{{paymentMethod}}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pemesan Info -->
+            <div class="attendee-section">
+                <h4>Informasi Pemesan</h4>
+                <div class="info-grid">
+                    <div class="info-row">
+                        <span class="info-label">Nama Lengkap</span>
+                        <span class="info-value">{{fullName}}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Email</span>
+                        <span class="info-value">{{email}}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">No. Telepon</span>
+                        <span class="info-value">{{phoneNumber}}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Jenis Identitas</span>
+                        <span class="info-value">{{identityType}}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">No. Identitas</span>
+                        <span class="info-value">{{identityNumber}}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <!-- Ticket Cards Loop -->
+            {{#each orderItems}}
+            <div class="ticket-card">
+                <div class="ticket-badge">Tiket {{increment @index}}</div>
+                
+                <div class="ticket-header">
+                    <h2 class="event-name">{{eventName}}</h2>
+                    <div class="ticket-code">{{ticketCode}}</div>
+                    <div class="status-badge">Confirmed</div>
+                </div>
+                
+                <!-- Event Details -->
+                <div class="event-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Tanggal</span>
+                        <span class="detail-value">{{startDate}}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Sampai</span>
+                        <span class="detail-value">{{endDate}}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Lokasi</span>
+                        <span class="detail-value">{{location}}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Kategori</span>
+                        <span class="detail-value">{{categoryName}}</span>
+                    </div>
+                </div>
+                
+                <!-- QR Code -->
+                <div class="qr-section">
+                    <h4>QR Code Tiket</h4>
+                    <p>Tunjukkan QR code ini saat check-in</p>
+                    <div class="qr-code">
+                        <img src="data:image/png;base64,{{qrCode}}" alt="QR Code" />
+                    </div>
+                </div>
+                
+                <!-- Attendee Info -->
+                <div class="attendee-section">
+                    <h4>Informasi Pengunjung</h4>
+                    <div class="info-grid">
+                        <div class="info-row">
+                            <span class="info-label">Nama</span>
+                            <span class="info-value">{{attendeeName}}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Email</span>
+                            <span class="info-value">{{attendeeEmail}}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">No. Telepon</span>
+                            <span class="info-value">{{attendeePhone}}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">No. Identitas</span>
+                            <span class="info-value">{{attendeeIdentityNumber}}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{/each}}
+            
+            <!-- Instructions Alert -->
+            <div class="alert">
+                <h4>Cara Redeem Tiket</h4>
+                <p>
+                    Datang ke <strong>booth registrasi</strong> dengan membawa e-tiket ini (print atau digital). 
+                    Tunjukkan <strong>QR Code</strong> dan <strong>identitas diri</strong> untuk check-in. 
+                    Registrasi dibuka mulai <strong>2 jam sebelum event dimulai</strong>.
+                </p>
+            </div>
+            
+            <!-- Important Notes -->
+            <div class="alert alert-destructive">
+                <h4>Informasi Penting</h4>
+                <ul>
+                    <li>Harap datang lebih awal untuk menghindari antrian</li>
+                    <li>Bawa identitas asli (KTP/SIM/Paspor) saat check-in</li>
+                    <li>Satu tiket berlaku untuk satu orang</li>
+                    <li>QR Code hanya dapat di-scan satu kali</li>
+                    <li>Tiket tidak dapat dipindahtangankan</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Butuh Bantuan?</strong></p>
+            <p>Email: support@eventku.com | WhatsApp: +62 821-9999-8888</p>
+            <div class="footer-links">
+                <a href="#">Instagram</a>
+                <a href="#">Facebook</a>
+                <a href="#">Twitter</a>
+            </div>
+            <p style="margin-top: 16px; font-size: 12px; color: #a1a1aa;">© 2025 EventKu. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

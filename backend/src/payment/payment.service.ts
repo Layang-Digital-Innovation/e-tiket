@@ -12,6 +12,7 @@ import { CreateOrderItemDto } from 'src/order_item/dto/create-order_item.dto';
 import { Ticket } from 'src/ticket/entities/ticket.entity';
 import { TicketService } from 'src/ticket/ticket.service';
 import { DataSource } from 'typeorm';
+import { EmailService } from 'src/email/email.service';
 
 interface CreateInvoiceParams {
   external_id: string;
@@ -72,6 +73,7 @@ export class PaymentService {
   constructor(
     private configService: ConfigService,
     private readonly ticketService: TicketService,
+    private readonly emailService: EmailService,
     private readonly dataSource: DataSource,
   ) {
     this.xenditPublicKey =
@@ -161,83 +163,141 @@ export class PaymentService {
     }
   }
 
-  async handlePaymentSuccess(callbackData: CallbackSuccessDto) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+async handlePaymentSuccess(callbackData: CallbackSuccessDto) {
+  const queryRunner = this.dataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction(); // pastikan transaction dimulai
 
-    try {
-      // 1️⃣ Cari order lengkap dengan attendees
-      const order = await queryRunner.manager.findOne(Order, {
-        where: { transactionCode: callbackData.external_id },
-        relations: [
-          'orderItems',
-          'orderItems.ticketCategory',
-          'orderItems.attendees', // pastikan relasi attendee di OrderItem
-        ],
-      });
+  try {
+    // 1️⃣ Cari order lengkap
+    const order = await queryRunner.manager.findOne(Order, {
+      where: { transactionCode: callbackData.external_id },
+      relations: [
+        'orderItems',
+        'orderItems.ticketCategory',
+        'orderItems.ticketCategory.event',
+        'orderItems.attendees', 
+      ],
+    });
 
-      if (!order) throw new NotFoundException('Order not found');
-      if (order.status === OrderStatus.PAID)
-        throw new BadRequestException('Order already paid');
+    this.logger.log(`Order: ${JSON.stringify(order)}`);
 
-      // 2️⃣ Update status order
-      order.status = OrderStatus.PAID;
-      order.paymentMethod = callbackData.payment_method;
-      order.paymentChannel = callbackData.payment_channel;
-      order.paidAt = callbackData.paid_at ? new Date(callbackData.paid_at) : undefined;
 
-      await queryRunner.manager.save(order);
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.status === OrderStatus.PAID)
+      throw new BadRequestException('Order already paid');
 
-      // 3️⃣ Update stok tiket & generate tiket baru
-      for (const item of order.orderItems) {
-        const category = item.ticketCategory;
+    // 2️⃣ Update status order
+    order.status = OrderStatus.PAID;
+    order.paymentMethod = callbackData.payment_method;
+    order.paymentChannel = callbackData.payment_channel;
+    order.paymentId = callbackData.id;
+    order.paidAt = callbackData.paid_at ? new Date(callbackData.paid_at) : undefined;
+    await queryRunner.manager.save(order);
 
-        // update sold count
-        category.sold += item.quantity;
-        await queryRunner.manager.save(category);
+ 
 
-        // generate ticket(s)
-        const ticketsToSave: Ticket[] = [];
-        for (let i = 0; i < item.quantity; i++) {
-          const attendee = item.attendees[i]; // 1:1 mapping dengan ticket
+    for (const item of order.orderItems) {
+         // 3️⃣ Update stok tiket & generate tiket baru
 
-          const ticket = queryRunner.manager.create(Ticket, {
-            orderItem: item,
-            ticketCategory: category,
-            order,
-            attendee, // assign attendee ke ticket
-          });
+      const category = item.ticketCategory;
 
-          ticketsToSave.push(ticket);
-        }
+      // update sold count
+      category.sold += item.quantity;
+      await queryRunner.manager.save(category);
 
-        await queryRunner.manager.save(ticketsToSave);
+      const ticketsToSave: Ticket[] = [];
+      // generate ticket(s) untuk tiap attendee
+      for (let i = 0; i < item.quantity; i++) {
+        const attendee = item.attendees[i]; // pastikan jumlah attendee sama dengan quantity
+        const ticket = queryRunner.manager.create(Ticket, {
+          orderItem: item,
+          ticketCategory: category,
+          order,
+          attendee,
+        });
+        ticketsToSave.push(ticket);
       }
+          // ✅ Simpan semua tiket sekaligus
+    await queryRunner.manager.save(ticketsToSave);
 
-      // 4️⃣ Commit transaksi
-      await queryRunner.commitTransaction();
+    for (const ticket of ticketsToSave){
 
-      // 5️⃣ Fetch ulang order lengkap dengan tiket + attendee
-      const finalOrder = await this.dataSource.getRepository(Order).findOne({
-        where: { id: order.id },
-        relations: [
-          'orderItems',
-          'orderItems.ticketCategory',
-          'orderItems.tickets',
-          'orderItems.tickets.attendee', // include attendee di tiket
-        ],
+      this.logger.log(`Ticket: ${JSON.stringify(ticket)}`);
+
+      await this.emailService.sendTicketEmail({
+        email: ticket.attendee.email,
+        subject: `Your Ticket for ${ticket.orderItem.ticketCategory.event.title}`,
+        ticket: {
+          eventName: ticket.orderItem.ticketCategory.event.title,
+          ticketCode: ticket.ticketCode,
+          attendeeName: ticket.attendee.fullName,
+          startDate: ticket.orderItem.ticketCategory.event.startDate.toISOString(),
+          endDate: ticket.orderItem.ticketCategory.event.endDate.toISOString(),
+          location: ticket.orderItem.ticketCategory.event.location,
+          categoryName: ticket.orderItem.ticketCategory.name,
+        },
       });
-
-      return finalOrder;
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      Logger.error('Payment confirmation failed:', error);
-      throw error;
-    } finally {
-      await queryRunner.release();
     }
+    
+    }
+
+
+
+    // 4️⃣ Commit transaksi
+    await queryRunner.commitTransaction();
+   
+
+ 
+
+  // 6️⃣ Kirim email summary ke buyer
+if (order.fullName) {
+  await this.emailService.sendOrderSummary({
+    email: order.email,
+    buyerName: order.fullName,
+    transactionCode: order.transactionCode,
+    totalAmount: order.totalAmount,
+    paymentMethod: order.paymentMethod,
+    status: order.status,
+    orderItems: order.orderItems.map((item) => ({
+      eventName: item.ticketCategory.event.title,
+      ticketCategory: item.ticketCategory.name,
+      quantity: item.quantity,
+      attendees: item.attendees.map((att) => ({
+       name: att.fullName ?? '',
+        email: att.email ?? '',
+        phone: att.phoneNumber ?? '',
+        identityType: att.identityType ?? '',
+        identityNumber: att.identityNumber ?? '',
+      })),
+    })),
+  });
+}
+
+
+
+    // 7️⃣ Fetch ulang order lengkap dengan tiket + attendee
+    const finalOrder = await queryRunner.manager.findOne(Order, {
+      where: { id: order.id },
+      relations: [
+        'orderItems',
+        'orderItems.ticketCategory',
+        'orderItems.tickets',
+        'orderItems.tickets.attendee',
+      ],
+    });
+
+    return finalOrder;
+  } catch (error) {
+    await queryRunner.rollbackTransaction();
+    Logger.error('Payment confirmation failed:', error);
+    throw error;
+  } finally {
+    await queryRunner.release();
   }
+}
+
+
 
  
 }
