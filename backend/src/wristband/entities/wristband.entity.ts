@@ -1,7 +1,8 @@
 import { AuditEntity } from "src/common/entities/audit.entity";
 import { Event } from "src/events/entities/event.entity";
+import { Ticket } from "src/ticket/entities/ticket.entity";
 import { TicketCategory } from "src/ticket_categories/entities/ticket_category.entity";
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { BeforeInsert, Column, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 
 
 export enum WristbandStatus {
@@ -25,7 +26,17 @@ event: Event;
 category: TicketCategory;
 
     @Column({nullable: true})
-    code? : string;
+    wristbandCode? : string;
+
+    @BeforeInsert()
+    async generateWristbandCode() {
+        if (!this.wristbandCode) {
+            const {customAlphabet} = await import ('nanoid')
+            const nanoid = customAlphabet('1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ', 10)
+            this.wristbandCode = nanoid()
+        }
+    }
+
 
     @Column({
         type: 'enum',
@@ -34,11 +45,14 @@ category: TicketCategory;
     })
     status: WristbandStatus;
 
-    @Column({type: 'uuid', nullable: true})
-    assignedTicketId?: string;
+      // 👇 Relasi langsung ke Ticket
+  @OneToOne(() => Ticket, (ticket) => ticket.assignedWristband, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'assigned_wristband_id' })
+  assignedTicket?: Ticket;
 
-    @Column({nullable: true})
-    assignedTicketCode?: string;
 
     @Column({nullable: true})
     assignedAt?: Date;

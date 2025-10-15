@@ -1,0 +1,20 @@
+import { Module } from '@nestjs/common';
+import { TicketModule } from 'src/ticket/ticket.module';
+import { WristbandModule } from 'src/wristband/wristband.module';
+import { CheckInService } from './check_in.service';
+import { CheckInController } from './check_in.controller';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Ticket } from 'src/ticket/entities/ticket.entity';
+import { Wristband } from 'src/wristband/entities/wristband.entity';
+
+@Module({
+    imports: [
+        TypeOrmModule.forFeature([Ticket, Wristband]),
+        TicketModule,
+        WristbandModule
+    ],
+    providers: [CheckInService],
+    exports: [CheckInService],
+    controllers: [CheckInController],
+})
+export class CheckInModule {}

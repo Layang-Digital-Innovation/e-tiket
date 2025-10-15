@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { ShieldX, Home, ArrowLeft } from 'lucide-react';
 
 export default function UnauthorizedPage() {

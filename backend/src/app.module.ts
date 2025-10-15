@@ -18,6 +18,8 @@ import { WristbandModule } from './wristband/wristband.module';
 import { AttendeesModule } from './attendees/attendees.module';
 import { PaymentModule } from './payment/payment.module';
 import { BullModule } from '@nestjs/bull';
+import { RedeemModule } from './redeem/redeem.module';
+import { CheckInModule } from './check_in/check_in.module';
 
 @Module({
   imports: [
@@ -33,7 +35,7 @@ import { BullModule } from '@nestjs/bull';
         port: configService.get('DB_PORT'),
         username: configService.get('DB_USERNAME'),
         password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_NAME'),
+        database: configService.get('DB_DATABASE'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: configService.get('NODE_ENV') !== 'production',
       }),
@@ -60,6 +62,8 @@ import { BullModule } from '@nestjs/bull';
     WristbandModule,
     AttendeesModule,
     PaymentModule,
+    RedeemModule,
+    CheckInModule,
   ],
   controllers: [AppController],
   providers: [AppService],

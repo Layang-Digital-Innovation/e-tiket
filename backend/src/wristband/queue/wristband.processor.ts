@@ -19,6 +19,9 @@ export class WristbandProcessor {
   async handleGenerateStock(job: Job<{ maxCapacity: number; eventId: string; categoryId: string }>) {
     this.logger.debug(`Processing generate stock job ${job.id}`);
     const { maxCapacity, eventId, categoryId } = job.data;
+
+    const count = await this.wristbandRepository.count();
+this.logger.debug(`Connected to DB. Current wristband count: ${count}`);
     
     try {
       const wristbands: CreateWristbandDto[] = [];
@@ -33,10 +36,20 @@ export class WristbandProcessor {
       // Simpan dalam batch untuk mengurangi beban database
       const batchSize = 100;
       for (let i = 0; i < wristbands.length; i += batchSize) {
-        const batch = wristbands.slice(i, i + batchSize);
-        await this.wristbandRepository.save(batch);
-        this.logger.debug(`Saved batch ${i / batchSize + 1} of ${Math.ceil(wristbands.length / batchSize)}`);
-      }
+  const batch = wristbands.slice(i, i + batchSize);
+
+  // Konversi DTO menjadi entity
+  const entities = batch.map(data =>
+    this.wristbandRepository.create({
+      event: { id: data.eventId } ,
+      category: { id: data.categoryId } ,
+      status: data.status,
+    }),
+  );
+
+  await this.wristbandRepository.save(entities);
+  this.logger.debug(`Saved batch ${i / batchSize + 1} of ${Math.ceil(wristbands.length / batchSize)}`);
+}
       
       this.logger.debug(`Successfully generated ${maxCapacity} wristbands for event ${eventId}, category ${categoryId}`);
       return { success: true, count: maxCapacity };

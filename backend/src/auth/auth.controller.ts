@@ -34,11 +34,10 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @UseGuards(LocalAuthGuard)
-  async login(@Request() req) {
-    
-    const token = await this.authService.login(req.user);
+  async login(@Request() req, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.login(req.user, res);
     return ApiResponseDto.success(
-      token,
+      result,
       "Login successful",
       HttpStatus.OK
     )
@@ -58,15 +57,21 @@ export class AuthController {
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
-  async logout() {
-    // In a real application, you might want to blacklist the token
-    // For now, we'll just return a success message
-    return { message: 'Logged out successfully' };
+  async logout(@Res({ passthrough: true }) res: Response) {
+    this.authService.clearAuthCookie(res);
+    return ApiResponseDto.success(
+      null,
+      'Logged out successfully',
+      HttpStatus.OK
+    );
   }
 
   @Get('verify-email')
-  async verifyEmail(@Query('token') token: string) {
-    return this.authService.verifyEmail(token);
+  async verifyEmail(
+    @Query('token') token: string,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    return this.authService.verifyEmail(token, res);
   }
 
   @Post('resend-verification')
@@ -94,11 +99,9 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(@Request() req, @Res() res: Response) {
-
-
-    const token = this.authService.login(req.user);
-    // Redirect to frontend with token
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${(await token).access_token}`);
+    await this.authService.login(req.user, res);
+    // Redirect to frontend - token is now in cookie
+    res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
   }
 
   @Post('create-admin')

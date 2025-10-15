@@ -47,8 +47,18 @@ export async function GET(request: NextRequest) {
     // Set secure cookies for token and user data
     const isProduction = process.env.NODE_ENV === 'production';
     
-    redirectResponse.cookies.set('authToken', token, {  
+    // IMPORTANT: Use 'access_token' to match middleware expectations
+    redirectResponse.cookies.set('access_token', token, {  
       httpOnly: false, // Allow client-side access for API calls
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    // Set user role cookie for middleware fallback
+    redirectResponse.cookies.set('user_role', userData.role, {
+      httpOnly: false,
       secure: isProduction,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days

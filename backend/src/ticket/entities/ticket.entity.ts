@@ -44,6 +44,13 @@ export class Ticket extends AuditEntity {
   @OneToOne(() => Attendee, attendee => attendee.ticket, { onDelete: 'CASCADE' })
   attendee: Attendee;  
 
+  @OneToOne(() => Wristband, (wristband) => wristband.assignedTicket, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'assigned_wristband_id' })
+  assignedWristband?: Wristband;
+
 
   @ManyToOne(() => OrderItem, (orderItem) => orderItem.tickets, {
     onDelete: 'CASCADE',
@@ -55,11 +62,6 @@ export class Ticket extends AuditEntity {
   @ManyToOne(() => TicketCategory, { eager: true })
   @JoinColumn({ name: 'category_id' })
   category: TicketCategory;
-
-
-  @ManyToOne(() => Wristband, { nullable: true })
-  @JoinColumn({ name: 'assigned_wristband_id' })
-  assignedWristband?: Wristband;
 
   @Column({name : 'redeemed_at', nullable: true})
   redeemedAt?: Date;

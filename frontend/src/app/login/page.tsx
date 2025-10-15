@@ -1,14 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
 import { Eye, EyeOff, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const { login, isAuthenticated, error: authError, clearError } = useAuth();
   
   const [formData, setFormData] = useState({
     email: '',
@@ -20,12 +26,31 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
+  // Check for error from OAuth callback or session expiry
+  useEffect(() => {
+    const error = searchParams.get('error');
+    const reason = searchParams.get('reason');
+    
+    if (error) {
+      setSubmitError(decodeURIComponent(error));
+    } else if (reason === 'session_expired') {
+      setSubmitError('Sesi Anda telah berakhir. Silakan login kembali.');
+    }
+  }, [searchParams]);
+
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      router.push('/dashboard');
+    if (isAuthenticated) {
+      router.push('/');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, router]);
+
+  // Clear auth errors when component unmounts
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
 
   // Validation function
   const validateForm = () => {
@@ -83,192 +108,170 @@ export default function LoginPage() {
     setSubmitError('');
 
     try {
-      await login(formData.email, formData.password);
-      // Redirect will be handled by useEffect
-    } catch (error: any) {
-      console.error('Login error:', error);
-      setSubmitError(error.message || 'Login gagal. Silakan coba lagi.');
+      await login({
+        email: formData.email,
+        password: formData.password,
+      });
+      // Login successful - redirect will happen via useEffect
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Login gagal. Silakan coba lagi.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Show loading spinner while checking auth status
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-          <span className="text-gray-600 dark:text-gray-300">Memuat...</span>
-        </div>
-      </div>
-    );
-  }
+  const displayError = submitError || authError;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
-            Masuk ke Akun Anda
-          </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Atau{' '}
-            <Link 
-              href="/register" 
-              className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              daftar akun baru
-            </Link>
-          </p>
-        </div>
-
-        {/* Form */}
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            {/* Email Field */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`block w-full pl-10 pr-3 py-2 border rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-500 ${
-                    errors.email ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'
-                  }`}
-                  placeholder="Masukkan email Anda"
-                />
-              </div>
-              {errors.email && (
-                <div className="mt-1 flex items-center text-sm text-red-600 dark:text-red-400">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {errors.email}
-                </div>
-              )}
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className={`block w-full pl-10 pr-10 py-2 border rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-500 ${
-                    errors.password ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'
-                  }`}
-                  placeholder="Masukkan password Anda"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
-                  )}
-                </button>
-              </div>
-              {errors.password && (
-                <div className="mt-1 flex items-center text-sm text-red-600 dark:text-red-400">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {errors.password}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Submit Error */}
-          {submitError && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-              <div className="flex items-center">
-                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mr-2" />
-                <span className="text-sm text-red-600 dark:text-red-400">{submitError}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Remember Me & Forgot Password */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-800"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                Ingat saya
-              </label>
-            </div>
-
-            <div className="text-sm">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md">
+        <Card className="border-slate-200 dark:border-slate-800">
+          <CardHeader className="space-y-2 text-center pb-4">
+            <CardTitle className="text-2xl font-bold">Masuk ke Akun Anda</CardTitle>
+            <CardDescription>
+              Atau{' '}
               <Link 
-                href="/forgot-password" 
-                className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+                href="/register" 
+                className="font-medium text-primary hover:underline"
               >
-                Lupa password?
+                daftar akun baru
               </Link>
-            </div>
-          </div>
+            </CardDescription>
+          </CardHeader>
 
-          {/* Submit Button */}
-          <div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700 transition-colors"
-            >
-              {isSubmitting ? (
-                <div className="flex items-center">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Masuk...
-                </div>
-              ) : (
-                'Masuk'
+          <CardContent className="space-y-4">
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {/* Display Error */}
+              {displayError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{displayError}</AlertDescription>
+                </Alert>
               )}
-            </button>
-          </div>
 
-          {/* Divider */}
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+              {/* Email Field */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="pl-9"
+                    placeholder="nama@example.com"
+                    aria-invalid={!!errors.email}
+                    disabled={isSubmitting}
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.email}
+                  </p>
+                )}
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400">
-                  Atau masuk dengan
-                </span>
-              </div>
-            </div>
 
-            {/* Google Login Button */}
-            <div className="mt-6">
-              <button
+              {/* Password Field */}
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="pl-9 pr-9"
+                    placeholder="••••••••"
+                    aria-invalid={!!errors.password}
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                    )}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.password}
+                  </p>
+                )}
+              </div>
+
+              {/* Remember Me & Forgot Password */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer">
+                    Ingat saya
+                  </Label>
+                </div>
+
+                <Link 
+                  href="/forgot-password" 
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Lupa password?
+                </Link>
+              </div>
+
+              {/* Submit Button */}
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Masuk...
+                  </>
+                ) : (
+                  'Masuk'
+                )}
+              </Button>
+
+              {/* Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Atau masuk dengan
+                  </span>
+                </div>
+              </div>
+
+              {/* Google Login Button */}
+              <Button
                 type="button"
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                variant="outline"
+                className="w-full"
                 onClick={() => {
                   window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/google`;
                 }}
@@ -292,20 +295,20 @@ export default function LoginPage() {
                   />
                 </svg>
                 Masuk dengan Google
-              </button>
-            </div>
-          </div>
-        </form>
+              </Button>
+            </form>
 
-        {/* Back to Home */}
-        <div className="text-center">
-          <Link 
-            href="/" 
-            className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            ← Kembali ke Beranda
-          </Link>
-        </div>
+            {/* Back to Home */}
+            <div className="text-center pt-4">
+              <Link 
+                href="/" 
+                className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+              >
+                ← Kembali ke Beranda
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

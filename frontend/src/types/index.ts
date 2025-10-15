@@ -2,8 +2,13 @@
 export interface User {
   id: string;
   email: string;
-  name: string;
-  role: 'admin' | 'organizer';
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  profileImage?: string;
+  role: 'admin' | 'event_organizer' | 'user';
+  status?: 'active' | 'inactive' | 'suspended';
+  emailVerified?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,11 +45,14 @@ export interface Event {
   location: string;
   maxCapacity: number;
   currentCapacity: number;
+  capacity: number; // Alias for maxCapacity
   price: number;
   isActive: boolean;
+  status?: 'published' | 'draft' | 'cancelled';
   organizerId: string;
   organizer?: EventOrganizer;
   tickets?: Ticket[];
+  ticketsCount?: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -29,4 +29,13 @@ orderItem: OrderItem;
 
   @Column({ nullable: true, name : "phone_number" })
   phoneNumber?: string;
+
+  @Column({ nullable: true, name : "gender" })
+  gender?: string;
+
+  @Column({ nullable: true, name : "address" })
+  address?: string;
+
+  @Column({ nullable: true, name : "birth_date" })
+  birthDate?: Date;
 }

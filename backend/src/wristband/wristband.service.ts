@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CreateWristbandDto } from './dto/create-wristband.dto';
 import { UpdateWristbandDto } from './dto/update-wristband.dto';
 import { Wristband, WristbandStatus } from './entities/wristband.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 
@@ -62,12 +62,79 @@ export class WristbandService {
     return this.wristbandRepository.find();
   }
 
+  findAssignedWristband() {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.ASSIGNED },
+      relations: ['event', 'category'],
+    });
+  }
+
+  findAssignedWristbandByCategory(categoryId: string) {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.ASSIGNED, category: { id: categoryId } },
+      relations: ['event', 'category'],
+    });
+  }
+
+  findCheckedInWristbandByCategory(categoryId: string) {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.CHECKED_IN, category: { id: categoryId } },
+      relations: ['event', 'category', 'ticket'],
+    });
+  }
+
+  findCheckedInWristbandByEvent(eventSlug: string) {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.CHECKED_IN, event: { slug: eventSlug } },
+      relations: ['event', 'category', 'ticket'],
+    });
+  }
+
   findOne(id: string) {
     return this.wristbandRepository.findOne({where: {id}});
   }
 
+   async findOneByCode(wristbandCode: string, manager?: EntityManager) {
+    const repository = manager ? manager.getRepository(Wristband) : this.wristbandRepository;
+
+    const wristband = await repository.findOne({
+      where: { wristbandCode },
+      relations: ['event', 'category', 'assignedTicket'],
+    });
+
+    if (!wristband) throw new NotFoundException('Wristband not found');
+    return wristband;
+  }
+
+  async saveChange(wristband: Wristband, manager?: EntityManager) {
+    const repository = manager ? manager.getRepository(Wristband) : this.wristbandRepository;
+    return repository.save(wristband);
+  }
+
   update(id: string, updateWristbandDto: UpdateWristbandDto) {
     return this.wristbandRepository.update(id, updateWristbandDto);
+  }
+
+  findUnusedWristbandsByEvent(eventSlug: string) {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.UNUSED, event: { slug: eventSlug } },
+      relations: ['event', 'category'],
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  findUnusedWristbandsByCategory(categoryId: string) {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.UNUSED, category: { id: categoryId } },
+      relations: ['event', 'category'],
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async getUnusedWristbandCountByEvent(eventSlug: string) {
+    return this.wristbandRepository.count({
+      where: { status: WristbandStatus.UNUSED, event: { slug: eventSlug } },
+    });
   }
 
   remove(id: string) {

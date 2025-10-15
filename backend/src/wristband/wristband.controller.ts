@@ -3,7 +3,7 @@ import { WristbandService } from './wristband.service';
 import { CreateWristbandDto } from './dto/create-wristband.dto';
 import { UpdateWristbandDto } from './dto/update-wristband.dto';
 
-@Controller('wristband')
+@Controller('api/wristband')
 export class WristbandController {
   constructor(private readonly wristbandService: WristbandService) {}
 
@@ -31,9 +31,24 @@ export class WristbandController {
     return this.wristbandService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.wristbandService.findOne(id);
+  @Get('assigned')
+  findAssignedWristband() {
+    return this.wristbandService.findAssignedWristband();
+  }
+
+  @Get('assigned/:categoryId')
+  findAssignedWristbandByCategory(@Param('categoryId') categoryId: string) {
+    return this.wristbandService.findAssignedWristbandByCategory(categoryId);
+  }
+
+  @Get('unused/:eventSlug')
+  findUnusedWristbandsByEvent(@Param('eventSlug') eventSlug: string) {
+    return this.wristbandService.findUnusedWristbandsByEvent(eventSlug);
+  }
+
+  @Get('unused/count/:eventSlug')
+  getUnusedWristbandCountByEvent(@Param('eventSlug') eventSlug: string) {
+    return this.wristbandService.getUnusedWristbandCountByEvent(eventSlug);
   }
 
   @Patch(':id')

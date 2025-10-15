@@ -1,12 +1,24 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
-import { CallbackSuccessDto } from './dto/callback-success.dto';
+import { CallbackSuccessDto } from '../payment/dto/callback-success.dto';
+import { PaymentService } from 'src/payment/payment.service';
 
 @Controller('api/order')
 export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(
+    private readonly orderService: OrderService,
+    private readonly paymentService: PaymentService,
+  ) {}
 
   @Post()
   create(@Body() createOrderDto: CreateOrderDto) {
@@ -15,7 +27,7 @@ export class OrderController {
 
   @Post('/callback')
   handlePaymentCallback(@Body() callbackData: CallbackSuccessDto) {
-    return this.orderService.handlePaymentSuccess(callbackData);
+    return this.paymentService.handlePaymentSuccess(callbackData);
   }
 
   @Get()
