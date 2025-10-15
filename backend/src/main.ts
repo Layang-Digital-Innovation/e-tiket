@@ -7,6 +7,7 @@ import {
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -16,6 +17,10 @@ async function bootstrap() {
 
     const app = await NestFactory.create(AppModule);
     logger.log('✅ NestFactory created successfully.');
+
+    // Enable cookie parser
+    logger.log('🍪 Enabling cookie parser...');
+    app.use(cookieParser());
 
     // Enable CORS for frontend
     logger.log('🌐 Enabling CORS...');

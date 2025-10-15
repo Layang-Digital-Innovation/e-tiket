@@ -1,5 +1,5 @@
 import { OrderItem } from "src/order_item/entities/order_item.entity";
-import { BeforeInsert, Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { BeforeInsert, Column, Entity, Index, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 
 export enum OrderStatus {
@@ -51,6 +51,7 @@ export class Order {
   }
 
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
+  @Index()
   status: OrderStatus;
 
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order, {cascade : true})

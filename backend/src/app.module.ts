@@ -19,7 +19,6 @@ import { AttendeesModule } from './attendees/attendees.module';
 import { PaymentModule } from './payment/payment.module';
 import { BullModule } from '@nestjs/bull';
 import { RedeemModule } from './redeem/redeem.module';
-import { CheckInService } from './check_in/check_in.service';
 import { CheckInModule } from './check_in/check_in.module';
 
 @Module({
@@ -67,6 +66,6 @@ import { CheckInModule } from './check_in/check_in.module';
     CheckInModule,
   ],
   controllers: [AppController],
-  providers: [AppService, CheckInService],
+  providers: [AppService],
 })
 export class AppModule {}

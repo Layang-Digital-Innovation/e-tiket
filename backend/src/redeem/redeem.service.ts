@@ -4,7 +4,7 @@ import { UpdateRedeemDto } from './dto/update-redeem.dto';
 import { TicketService } from 'src/ticket/ticket.service';
 import { WristbandService } from 'src/wristband/wristband.service';
 import { TicketStatus } from 'src/ticket/entities/ticket.entity';
-import { WristbandStatus } from 'src/wristband/entities/wristband.entity';
+import { Wristband, WristbandStatus } from 'src/wristband/entities/wristband.entity';
 import { DataSource } from 'typeorm';
 
 @Injectable()
@@ -48,18 +48,30 @@ export class RedeemService {
     });
   }
   findAll() {
-    return `This action returns all redeem`;
+    return this.dataSource.getRepository(Wristband).find({
+      where: { status: WristbandStatus.ASSIGNED },
+      relations: ['assignedTicket', 'event', 'category'],
+      order: { assignedAt: 'DESC' },
+    });
   }
 
   findOne(id: string) {
-    return `This action returns a #${id} redeem`;
+    return this.dataSource.getRepository(Wristband).findOne({
+      where: { id, status: WristbandStatus.ASSIGNED },
+      relations: ['assignedTicket', 'event', 'category'],
+    });
   }
 
   update(id: number, updateRedeemDto: UpdateRedeemDto) {
+    // Since redeem operations are typically one-time actions,
+    // we don't need to update redeem records
+    // This method could be used for administrative purposes if needed
     return `This action updates a #${id} redeem`;
   }
 
   remove(id: number) {
+    // Redeem operations should not be deleted as they represent
+    // historical ticket-to-wristband assignments
     return `This action removes a #${id} redeem`;
   }
 }

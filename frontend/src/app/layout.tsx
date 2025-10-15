@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Geist_Mono, Heebo, Inter, Lora, PT_Serif } from "next/font/google";
+import { PT_Sans, PT_Serif } from "next/font/google";
 import "./globals.css";
 import ReactQueryProvider from "@/lib/react-query";
-import Header from "@/components/header";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthInitializer } from "@/components/auth/AuthInitializer";
 
-
-
-
-const heebo = Heebo({
-  variable: "--font-heebo",
+const ptSans = PT_Sans({
+  variable: "--font-pt-sans",
   weight: ["400", "700"],
   subsets: ["latin"],
 });
@@ -23,6 +19,7 @@ const ptSerif = PT_Serif({
 export const metadata: Metadata = {
   title: "Event Ticketing System",
   description: "Platform untuk mengelola dan membeli tiket event",
+  referrer: "no-referrer",
 };
 
 export default function RootLayout({
@@ -33,13 +30,11 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body
-        className={`${heebo.variable} ${ptSerif.variable} antialiased`}
+        className={`${ptSans.variable} ${ptSerif.variable} antialiased`}
       >
         <ReactQueryProvider>
-          <AuthProvider>
-            <Header />
-            {children}
-          </AuthProvider>
+          <AuthInitializer />
+          {children}
         </ReactQueryProvider>
       </body>
     </html>

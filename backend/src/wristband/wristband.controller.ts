@@ -41,15 +41,14 @@ export class WristbandController {
     return this.wristbandService.findAssignedWristbandByCategory(categoryId);
   }
 
-  @Get('checked-in/:eventSlug')
-  findCheckedInWristbandByEvent(@Param('eventSlug') eventSlug: string) {
-    return this.wristbandService.findCheckedInWristbandByEvent(eventSlug);
+  @Get('unused/:eventSlug')
+  findUnusedWristbandsByEvent(@Param('eventSlug') eventSlug: string) {
+    return this.wristbandService.findUnusedWristbandsByEvent(eventSlug);
   }
 
-
-  @Get(':code')
-  findOne(@Param('code') code: string) {
-    return this.wristbandService.findOneByCode(code);
+  @Get('unused/count/:eventSlug')
+  getUnusedWristbandCountByEvent(@Param('eventSlug') eventSlug: string) {
+    return this.wristbandService.getUnusedWristbandCountByEvent(eventSlug);
   }
 
   @Patch(':id')

@@ -1,114 +1,95 @@
 'use client';
 
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Header from '@/components/header';
 import { apiService } from '@/services/api';
 import { CreateEventRequest } from '@/types/api';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface EventFormData {
-  title: string;
-  description: string;
-  location: string;
-  startDate: string;
-  endDate: string;
-  startTime: string;
-  endTime: string;
-  maxCapacity: number;
-  price: number;
-  imageUrl: string;
-  category: string;
-}
+const eventFormSchema = z.object({
+  title: z.string().min(1, 'Judul event wajib diisi'),
+  description: z.string().min(1, 'Deskripsi event wajib diisi'),
+  location: z.string().min(1, 'Lokasi event wajib diisi'),
+  startDate: z.date({
+    required_error: 'Tanggal mulai wajib diisi',
+  }),
+  endDate: z.date({
+    required_error: 'Tanggal selesai wajib diisi',
+  }),
+  startTime: z.string().min(1, 'Waktu mulai wajib diisi'),
+  endTime: z.string().min(1, 'Waktu selesai wajib diisi'),
+  imageUrl: z.string().optional(),
+}).refine(data => {
+  const startDateTime = new Date(data.startDate);
+  const endDateTime = new Date(data.endDate);
+  return startDateTime < endDateTime;
+}, {
+  message: 'Tanggal selesai harus setelah tanggal mulai',
+  path: ['endDate'],
+});
 
 export default function CreateEventPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<EventFormData>({
-    title: '',
-    description: '',
-    location: '',
-    startDate: '',
-    endDate: '',
-    startTime: '',
-    endTime: '',
-    maxCapacity: 0,
-    price: 0,
-    imageUrl: '',
-    category: '',
+  const form = useForm<z.infer<typeof eventFormSchema>>({
+    resolver: zodResolver(eventFormSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      location: '',
+      startDate: new Date(),
+      endDate: new Date(),
+      startTime: '08:00',
+      endTime: '17:00',
+      imageUrl: '',
+    },
   });
 
-  const [errors, setErrors] = useState<Partial<EventFormData>>({});
+  const isLoading = form.formState.isSubmitting;
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'maxCapacity' || name === 'price' ? Number(value) : value
-    }));
-    
-    // Clear error when user starts typing
-    if (errors[name as keyof EventFormData]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: Partial<EventFormData> = {};
-
-    if (!formData.title.trim()) newErrors.title = 'Judul event wajib diisi';
-    if (!formData.description.trim()) newErrors.description = 'Deskripsi event wajib diisi';
-    if (!formData.location.trim()) newErrors.location = 'Lokasi event wajib diisi';
-    if (!formData.startDate) newErrors.startDate = 'Tanggal mulai wajib diisi';
-    if (!formData.endDate) newErrors.endDate = 'Tanggal selesai wajib diisi';
-    if (!formData.startTime) newErrors.startTime = 'Waktu mulai wajib diisi';
-    if (!formData.endTime) newErrors.endTime = 'Waktu selesai wajib diisi';
-    if (formData.maxCapacity <= 0) newErrors.maxCapacity = 'Kapasitas harus lebih dari 0';
-    if (formData.price < 0) newErrors.price = 'Harga tidak boleh negatif';
-    if (!formData.category) newErrors.category = 'Kategori event wajib dipilih';
-
-    // Validate dates
-    if (formData.startDate && formData.endDate) {
-      const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
-      const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
-      
-      if (startDateTime >= endDateTime) {
-        newErrors.endDate = 'Tanggal dan waktu selesai harus setelah tanggal dan waktu mulai';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-    
+  const onSubmit = async (values: z.infer<typeof eventFormSchema>) => {
     try {
-      // Combine date and time
-      const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
-      const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
+      const startDateTime = new Date(values.startDate);
+      startDateTime.setHours(
+        parseInt(values.startTime.split(':')[0]),
+        parseInt(values.startTime.split(':')[1])
+      );
+      
+      const endDateTime = new Date(values.endDate);
+      endDateTime.setHours(
+        parseInt(values.endTime.split(':')[0]),
+        parseInt(values.endTime.split(':')[1])
+      );
 
       const eventData: CreateEventRequest = {
-        title: formData.title,
-        description: formData.description,
-        location: formData.location,
+        title: values.title,
+        description: values.description,
+        location: values.location,
         startDate: startDateTime.toISOString(),
         endDate: endDateTime.toISOString(),
-        maxCapacity: formData.maxCapacity,
-        price: formData.price,
-        imageUrl: formData.imageUrl || undefined,
-        category: formData.category,
-        status: 'DRAFT' // Default status
+        imageUrl: values.imageUrl || undefined,
       };
 
       await apiService.createEvent(eventData);
@@ -117,315 +98,225 @@ export default function CreateEventPage() {
     } catch (error) {
       console.error('Failed to create event:', error);
       alert('Gagal membuat event. Silakan coba lagi.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
-      
-      <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+      <div className="container max-w-screen-lg mx-auto py-6 sm:px-6 lg:px-10">
         <div className="px-4 py-6 sm:px-0">
-          {/* Header */}
           <div className="mb-8">
             <div className="flex items-center space-x-4 mb-4">
-              <Link
-                href="/eo/events"
-                className="text-gray-600 hover:text-gray-900"
-              >
+              <Link href="/eo/events" className="text-gray-600 hover:text-gray-900">
                 ← Kembali ke Daftar Event
               </Link>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Buat Event Baru
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-900">Buat Event Baru</h1>
             <p className="mt-2 text-gray-600">
               Isi informasi lengkap untuk event yang akan Anda buat
             </p>
           </div>
 
-          {/* Form */}
           <div className="bg-white shadow rounded-lg">
-            <form onSubmit={handleSubmit} className="space-y-6 p-6">
-              {/* Basic Information */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Informasi Dasar
-                </h3>
-                
-                <div className="grid grid-cols-1 gap-6">
-                  <div>
-                    <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                      Judul Event *
-                    </label>
-                    <input
-                      type="text"
-                      id="title"
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-6">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Informasi Dasar</h3>
+                  
+                  <div className="grid grid-cols-1 gap-6">
+                    <FormField
+                      control={form.control}
                       name="title"
-                      value={formData.title}
-                      onChange={handleInputChange}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${
-                        errors.title ? 'border-red-300' : ''
-                      }`}
-                      placeholder="Masukkan judul event"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Judul Event *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Masukkan judul event" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    {errors.title && (
-                      <p className="mt-1 text-sm text-red-600">{errors.title}</p>
-                    )}
-                  </div>
 
-                  <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                      Deskripsi Event *
-                    </label>
-                    <textarea
-                      id="description"
+                    <FormField
+                      control={form.control}
                       name="description"
-                      rows={4}
-                      value={formData.description}
-                      onChange={handleInputChange}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${
-                        errors.description ? 'border-red-300' : ''
-                      }`}
-                      placeholder="Jelaskan detail event Anda"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Deskripsi Event *</FormLabel>
+                          <FormControl>
+                            <Textarea rows={4} placeholder="Jelaskan detail event Anda" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    {errors.description && (
-                      <p className="mt-1 text-sm text-red-600">{errors.description}</p>
-                    )}
-                  </div>
 
-                  <div>
-                    <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-                      Kategori Event *
-                    </label>
-                    <select
-                      id="category"
-                      name="category"
-                      value={formData.category}
-                      onChange={handleInputChange}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${
-                        errors.category ? 'border-red-300' : ''
-                      }`}
-                    >
-                      <option value="">Pilih kategori</option>
-                      <option value="music">Musik</option>
-                      <option value="workshop">Workshop</option>
-                      <option value="conference">Konferensi</option>
-                      <option value="festival">Festival</option>
-                      <option value="sports">Olahraga</option>
-                      <option value="food">Kuliner</option>
-                      <option value="art">Seni</option>
-                      <option value="technology">Teknologi</option>
-                      <option value="business">Bisnis</option>
-                      <option value="other">Lainnya</option>
-                    </select>
-                    {errors.category && (
-                      <p className="mt-1 text-sm text-red-600">{errors.category}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700">
-                      URL Gambar Event
-                    </label>
-                    <input
-                      type="url"
-                      id="imageUrl"
+                    <FormField
+                      control={form.control}
                       name="imageUrl"
-                      value={formData.imageUrl}
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      placeholder="https://example.com/image.jpg"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>URL Gambar Event</FormLabel>
+                          <FormControl>
+                            <Input placeholder="https://example.com/image.jpg" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Opsional. Masukkan URL gambar untuk poster event
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    <p className="mt-1 text-sm text-gray-500">
-                      Opsional. Masukkan URL gambar untuk poster event
-                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Location and Date */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Lokasi dan Waktu
-                </h3>
-                
-                <div className="grid grid-cols-1 gap-6">
-                  <div>
-                    <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-                      Lokasi Event *
-                    </label>
-                    <input
-                      type="text"
-                      id="location"
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Lokasi dan Waktu</h3>
+                  
+                  <div className="grid grid-cols-1 gap-6">
+                    <FormField
+                      control={form.control}
                       name="location"
-                      value={formData.location}
-                      onChange={handleInputChange}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${
-                        errors.location ? 'border-red-300' : ''
-                      }`}
-                      placeholder="Masukkan alamat lengkap venue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Lokasi Event *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Masukkan alamat lengkap venue" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    {errors.location && (
-                      <p className="mt-1 text-sm text-red-600">{errors.location}</p>
-                    )}
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">
-                        Tanggal Mulai *
-                      </label>
-                      <input
-                        type="date"
-                        id="startDate"
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
                         name="startDate"
-                        value={formData.startDate}
-                        onChange={handleInputChange}
-                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${
-                          errors.startDate ? 'border-red-300' : ''
-                        }`}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Tanggal Mulai *</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-full pl-3 text-left font-normal",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                  >
+                                    {field.value ? (
+                                      format(field.value, "PPP")
+                                    ) : (
+                                      <span>Pilih tanggal</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  disabled={(date: Date) =>
+                                    date < new Date() || date < new Date("1900-01-01")
+                                  }
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                      {errors.startDate && (
-                        <p className="mt-1 text-sm text-red-600">{errors.startDate}</p>
-                      )}
-                    </div>
 
-                    <div>
-                      <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">
-                        Tanggal Selesai *
-                      </label>
-                      <input
-                        type="date"
-                        id="endDate"
+                      <FormField
+                        control={form.control}
                         name="endDate"
-                        value={formData.endDate}
-                        onChange={handleInputChange}
-                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${
-                          errors.endDate ? 'border-red-300' : ''
-                        }`}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Tanggal Selesai *</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    className={cn(
+                                      "w-full pl-3 text-left font-normal",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                  >
+                                    {field.value ? (
+                                      format(field.value, "PPP")
+                                    ) : (
+                                      <span>Pilih tanggal</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  disabled={(date: Date) =>
+                                    date < new Date() || date < new Date("1900-01-01")
+                                  }
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                      {errors.endDate && (
-                        <p className="mt-1 text-sm text-red-600">{errors.endDate}</p>
-                      )}
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="startTime" className="block text-sm font-medium text-gray-700">
-                        Waktu Mulai *
-                      </label>
-                      <input
-                        type="time"
-                        id="startTime"
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
                         name="startTime"
-                        value={formData.startTime}
-                        onChange={handleInputChange}
-                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${
-                          errors.startTime ? 'border-red-300' : ''
-                        }`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Waktu Mulai *</FormLabel>
+                            <FormControl>
+                              <Input type="time" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                      {errors.startTime && (
-                        <p className="mt-1 text-sm text-red-600">{errors.startTime}</p>
-                      )}
-                    </div>
 
-                    <div>
-                      <label htmlFor="endTime" className="block text-sm font-medium text-gray-700">
-                        Waktu Selesai *
-                      </label>
-                      <input
-                        type="time"
-                        id="endTime"
+                      <FormField
+                        control={form.control}
                         name="endTime"
-                        value={formData.endTime}
-                        onChange={handleInputChange}
-                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${
-                          errors.endTime ? 'border-red-300' : ''
-                        }`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Waktu Selesai *</FormLabel>
+                            <FormControl>
+                              <Input type="time" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                      {errors.endTime && (
-                        <p className="mt-1 text-sm text-red-600">{errors.endTime}</p>
-                      )}
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Capacity and Pricing */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Kapasitas dan Harga
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="maxCapacity" className="block text-sm font-medium text-gray-700">
-                      Kapasitas Maksimal *
-                    </label>
-                    <input
-                      type="number"
-                      id="maxCapacity"
-                      name="maxCapacity"
-                      min="1"
-                      value={formData.maxCapacity || ''}
-                      onChange={handleInputChange}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${
-                        errors.maxCapacity ? 'border-red-300' : ''
-                      }`}
-                      placeholder="Jumlah peserta maksimal"
-                    />
-                    {errors.maxCapacity && (
-                      <p className="mt-1 text-sm text-red-600">{errors.maxCapacity}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                      Harga Dasar (Rp) *
-                    </label>
-                    <input
-                      type="number"
-                      id="price"
-                      name="price"
-                      min="0"
-                      value={formData.price || ''}
-                      onChange={handleInputChange}
-                      className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${
-                        errors.price ? 'border-red-300' : ''
-                      }`}
-                      placeholder="0"
-                    />
-                    {errors.price && (
-                      <p className="mt-1 text-sm text-red-600">{errors.price}</p>
-                    )}
-                    <p className="mt-1 text-sm text-gray-500">
-                      Masukkan 0 untuk event gratis
-                    </p>
-                  </div>
+                <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                  <Link href="/eo/events" className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    Batal
+                  </Link>
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? 'Membuat Event...' : 'Buat Event'}
+                  </Button>
                 </div>
-              </div>
-
-              {/* Submit Buttons */}
-              <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
-                <Link
-                  href="/eo/events"
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Batal
-                </Link>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? 'Membuat Event...' : 'Buat Event'}
-                </button>
-              </div>
-            </form>
+              </form>
+            </Form>
           </div>
         </div>
       </div>

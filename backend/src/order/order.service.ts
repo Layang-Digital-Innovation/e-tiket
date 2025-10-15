@@ -14,9 +14,7 @@ import { TicketCategoriesService } from 'src/ticket_categories/ticket_categories
 import { TicketCategoriesValidationService } from 'src/ticket_categories/validation/validation.service';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import { OrderItem } from 'src/order_item/entities/order_item.entity';
-import { Ticket } from 'src/ticket/entities/ticket.entity';
 import { Attendee } from 'src/attendees/entities/attendee.entity';
-import { CallbackSuccessDto } from '../payment/dto/callback-success.dto';
 import { PaymentService } from 'src/payment/payment.service';
 import { EventsService } from 'src/events/events.service';
 
@@ -76,7 +74,7 @@ export class OrderService {
         });
         await queryRunner.manager.save(orderItem);
 
-        // ✨ Buat attendee untuk tiap ticket (tetapi belum ada tiket)
+        //  Buat attendee untuk tiap ticket (tetapi belum ada tiket)
         if (
           !item.detailAtendee ||
           item.detailAtendee.length !== item.quantity
@@ -86,18 +84,19 @@ export class OrderService {
           );
         }
 
-        for (let i = 0; i < item.quantity; i++) {
-          const attendeeData = item.detailAtendee[i];
-          const attendee = queryRunner.manager.create(Attendee, {
+        const attendeesToSave = item.detailAtendee.map(attendeeData =>
+          queryRunner.manager.create(Attendee, {
             orderItem,
             fullName: attendeeData.fullName,
             email: attendeeData.email,
             phoneNumber: attendeeData.phoneNumber,
             identityType: attendeeData.identityType,
             identityNumber: attendeeData.identityNumber,
-          });
-          await queryRunner.manager.save(attendee);
-        }
+            gender: attendeeData.gender,
+            address: attendeeData.address,
+            birthDate: attendeeData.birthDate ? new Date(attendeeData.birthDate) : undefined,
+          }));
+        await queryRunner.manager.save(attendeesToSave);
 
         savedOrder.orderItems.push(orderItem);
       }

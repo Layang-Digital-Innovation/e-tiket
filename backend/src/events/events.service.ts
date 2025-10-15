@@ -11,12 +11,15 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { UserRole } from '../users/entities/user.entity';
 import slugify from 'slugify';
+import { TicketCategory } from '../ticket_categories/entities/ticket_category.entity';
 
 @Injectable()
 export class EventsService {
   constructor(
     @InjectRepository(Event)
     private readonly eventsRepository: Repository<Event>,
+    @InjectRepository(TicketCategory)
+    private readonly ticketCategoriesRepository: Repository<TicketCategory>,
   ) {}
 
   async create(createEventDto: CreateEventDto, userId: string): Promise<Event> {
@@ -164,6 +167,17 @@ export class EventsService {
     // Check authorization
     if (userRole !== UserRole.ADMIN && event.organizer.id !== userId) {
       throw new ForbiddenException('You can only delete your own events');
+    }
+
+    // Check if event has ended
+    const currentDate = new Date();
+    if (currentDate < event.endDate) {
+      throw new BadRequestException('Cannot delete event before it has ended');
+    }
+
+    // Delete related ticket categories first
+    if (event.ticketCategories && event.ticketCategories.length > 0) {
+      await this.ticketCategoriesRepository.remove(event.ticketCategories);
     }
 
     await this.eventsRepository.remove(event);

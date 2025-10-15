@@ -2,22 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/store/auth.store';
 
 export default function AuthSuccessPage() {
   const router = useRouter();
-  const { updateUser } = useAuth();
   const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
     const processAuthSuccess = async () => {
       try {
         setIsProcessing(true);
+        
         // Get token and user data from cookies
-        const token = getCookie('authToken');
+        const token = getCookie('access_token');
         const userDataStr = getCookie('userData');
 
-        console.log(userDataStr)
+        console.log('OAuth Success - Token:', token ? 'EXISTS' : 'MISSING');
+        console.log('OAuth Success - UserData:', userDataStr);
 
         if (!token || !userDataStr) {
           throw new Error('Missing authentication data');
@@ -30,8 +31,16 @@ export default function AuthSuccessPage() {
           throw new Error('Invalid user data structure');
         }
 
+        // Update Zustand store with user data using setState
+        useAuthStore.setState({
+          user: userData,
+          isAuthenticated: true,
+          tokenExpiry: Date.now() + (60 * 60 * 24 * 7 * 1000), // 7 days
+          isLoading: false,
+          error: null,
+        });
 
- 
+        console.log('✅ OAuth Success - User authenticated:', userData.email, 'Role:', userData.role);
 
         // Redirect based on user role
         const redirectPath = getUserRedirectPath(userData.role);
@@ -43,7 +52,7 @@ export default function AuthSuccessPage() {
         }, 500);
 
       } catch (error) {
-        console.error('Auth success processing failed:', error);
+        console.error('❌ Auth success processing failed:', error);
         // Clear any partial auth data
         clearAuthData();
         setIsProcessing(false);
@@ -52,7 +61,7 @@ export default function AuthSuccessPage() {
     };
 
     processAuthSuccess();
-  }, [updateUser, router]);
+  }, [router]);
 
   const getCookie = (name: string): string | null => {
     if (typeof document === 'undefined') return null;
@@ -67,11 +76,11 @@ export default function AuthSuccessPage() {
 
   const clearAuthData = () => {
     // Clear localStorage
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('authUser');
+    localStorage.removeItem('auth-storage');
     
     // Clear cookies
-    document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'user_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     document.cookie = 'userData=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   };
 

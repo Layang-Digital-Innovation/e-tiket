@@ -1,7 +1,7 @@
-import { IsEmail, IsNotEmpty, IsPhoneNumber, IsString } from "class-validator";
+import { IsEmail, IsNotEmpty, IsPhoneNumber, IsString, IsOptional, IsDateString } from "class-validator";
 
 export class CreateAttendeeDto {
-  
+
       @IsString()
     @IsNotEmpty()
      fullName: string;
@@ -20,5 +20,17 @@ export class CreateAttendeeDto {
     @IsPhoneNumber("ID")
     @IsNotEmpty()
     phoneNumber: string;
+
+    @IsString()
+    @IsOptional()
+    gender?: string;
+
+    @IsString()
+    @IsOptional()
+    address?: string;
+
+    @IsDateString()
+    @IsOptional()
+    birthDate?: string;
 }
 

@@ -1,14 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { RedeemService } from './redeem.service';
 import { RedeemDto } from './dto/create-redeem.dto';
 import { UpdateRedeemDto } from './dto/update-redeem.dto';
+import { AuditController } from 'src/common/decorators/audit.decorator';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('api/redeem')
+@AuditController()
 export class RedeemController {
   constructor(private readonly redeemService: RedeemService) {}
 
   @Post()
-  create(@Body() createRedeemDto: RedeemDto) {
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  redeem(@Body() createRedeemDto: RedeemDto) {
     return this.redeemService.redeemTicketToWristband(createRedeemDto.ticketCode, createRedeemDto.wristbandCode);
   }
 

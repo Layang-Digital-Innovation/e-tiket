@@ -99,7 +99,7 @@ export class WristbandService {
 
     const wristband = await repository.findOne({
       where: { wristbandCode },
-      relations: ['event', 'category'],
+      relations: ['event', 'category', 'assignedTicket'],
     });
 
     if (!wristband) throw new NotFoundException('Wristband not found');
@@ -113,6 +113,28 @@ export class WristbandService {
 
   update(id: string, updateWristbandDto: UpdateWristbandDto) {
     return this.wristbandRepository.update(id, updateWristbandDto);
+  }
+
+  findUnusedWristbandsByEvent(eventSlug: string) {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.UNUSED, event: { slug: eventSlug } },
+      relations: ['event', 'category'],
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  findUnusedWristbandsByCategory(categoryId: string) {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.UNUSED, category: { id: categoryId } },
+      relations: ['event', 'category'],
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async getUnusedWristbandCountByEvent(eventSlug: string) {
+    return this.wristbandRepository.count({
+      where: { status: WristbandStatus.UNUSED, event: { slug: eventSlug } },
+    });
   }
 
   remove(id: string) {

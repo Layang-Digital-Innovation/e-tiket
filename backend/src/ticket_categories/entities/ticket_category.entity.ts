@@ -1,6 +1,6 @@
 import { Wristband } from "src/wristband/entities/wristband.entity";
 import { Event } from "src/events/entities/event.entity";
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { AuditEntity } from "src/common/entities/audit.entity";
 
 @Entity("ticket_category")
@@ -9,6 +9,7 @@ export class TicketCategory extends AuditEntity {
     id: string;
 
     @Column({ type: 'uuid', name: 'event_id' })
+    @Index()
     eventId: string;
 
     @Column({ type: 'varchar', name: 'name' })
@@ -24,6 +25,7 @@ export class TicketCategory extends AuditEntity {
     maxQuantity: number;
 
     @Column({ type: 'int', name: 'sold', default: 0 })
+    @Index()
     sold: number;
 
     @ManyToOne(() => Event, { onDelete : "CASCADE"})

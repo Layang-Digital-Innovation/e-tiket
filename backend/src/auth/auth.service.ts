@@ -1,11 +1,13 @@
 import { Injectable, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { EmailService } from '../email/email.service';
+import { Response } from 'express';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -14,6 +16,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private emailService: EmailService,
+    private configService: ConfigService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -29,15 +32,19 @@ export class AuthService {
     return null;
   }
 
-  async login(user: any) {
+  async login(user: any, response: Response) {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
       role: user.role,
     };
 
+    const accessToken = this.jwtService.sign(payload);
+
+    // Set secure HTTP-only cookie
+    this.setAuthCookie(response, accessToken);
+
     return {
-      access_token: this.jwtService.sign(payload),
       user: {
         id: user.id,
         email: user.email,
@@ -47,6 +54,28 @@ export class AuthService {
         status: user.status,
       },
     };
+  }
+
+  private setAuthCookie(response: Response, token: string) {
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    const cookieMaxAge = this.configService.get<number>('COOKIE_MAX_AGE') || 7 * 24 * 60 * 60 * 1000; // 7 days default
+
+    response.cookie('access_token', token, {
+      httpOnly: true,
+      secure: isProduction, // HTTPS only in production
+      sameSite: isProduction ? 'strict' : 'lax',
+      maxAge: cookieMaxAge,
+      path: '/',
+    });
+  }
+
+  clearAuthCookie(response: Response) {
+    response.clearCookie('access_token', {
+      httpOnly: true,
+      secure: this.configService.get('NODE_ENV') === 'production',
+      sameSite: this.configService.get('NODE_ENV') === 'production' ? 'strict' : 'lax',
+      path: '/',
+    });
   }
 
   async register(
@@ -142,7 +171,7 @@ export class AuthService {
     return await this.usersService.createFromOAuth(oauthUser);
   }
 
-  async verifyEmail(token: string): Promise<{ message: string; access_token?: string; user?: Partial<User> }> {
+  async verifyEmail(token: string, response: Response): Promise<{ message: string; user?: Partial<User> }> {
     const user = await this.usersService.findByEmailVerificationToken(token);
 
     if (!user) {
@@ -174,9 +203,11 @@ export class AuthService {
       role: updatedUser.role,
     };
 
+    const accessToken = this.jwtService.sign(payload);
+    this.setAuthCookie(response, accessToken);
+
     return {
       message: 'Email verified successfully',
-      access_token: this.jwtService.sign(payload),
       user: {
         id: updatedUser.id,
         email: updatedUser.email,

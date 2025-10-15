@@ -48,8 +48,13 @@ export interface Purchase {
 export interface User {
   id: string;
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  profileImage?: string;
   role: 'admin' | 'event_organizer' | 'user';
+  status?: 'active' | 'inactive' | 'suspended';
+  emailVerified?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -81,8 +86,7 @@ export interface CreateEventRequest {
   startDate: string;
   endDate: string;
   location: string;
-  capacity: number;
-  price: number;
+  imageUrl?: string;
 }
 
 export interface CreateTicketRequest {
