@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useMyEvents, useDeleteEvent } from '@/hooks';
 import { EventCard } from '@/components/events/EventCard';
 import { Plus, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function EOEventsPage() {
   const [page, setPage] = useState(1);
@@ -56,13 +57,15 @@ export default function EOEventsPage() {
                 <RefreshCw className="h-4 w-4" />
                 Refresh
               </button>
-              <Link
-                href="/organizer/events/create"
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+              <Button
+               asChild
+                className="inline-flex items-center gap-2 text-white px-4 py-2 rounded-md text-sm font-medium"
               >
+                <Link href="/organizer/events/create">
                 <Plus className="h-4 w-4" />
                 Buat Event
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
 

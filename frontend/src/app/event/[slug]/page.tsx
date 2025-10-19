@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { use, useState } from 'react';
 import Header from '@/components/header';
 
-export default function PublicEventPage({ params }: { params: { slug: string } }) {
+export default function PublicEventPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
   const [event] = useState({
-      slug: params.slug,
+      slug: slug,
     title: 'Konser Musik Jazz',
     description: 'Nikmati malam yang penuh dengan alunan musik jazz dari musisi terbaik Indonesia dan internasional. Event ini akan menghadirkan pengalaman musik yang tak terlupakan dengan suasana yang intim dan berkelas.',
     longDescription: `

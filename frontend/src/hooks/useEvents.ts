@@ -12,7 +12,7 @@ export const eventKeys = {
   myEventsList: (filters: { page?: number; limit?: number }) =>
     [...eventKeys.myEvents(), filters] as const,
   details: () => [...eventKeys.all, 'detail'] as const,
-  detail: (id: string) => [...eventKeys.details(), id] as const,
+  detail: (slug: string) => [...eventKeys.details(), slug] as const,
 };
 
 // ============================================
@@ -69,6 +69,22 @@ export function useEvent(id: string, enabled = true) {
   });
 }
 
+/**
+ * Get event by slug
+ */
+export function useEventBySlug(slug: string, enabled = true) {
+  return useQuery({
+    queryKey: [...eventKeys.details(), 'slug', slug] as const,
+    queryFn: async () => {
+      const response = await apiService.getEventBySlug(slug);
+      return (response as any).data as Event;
+    },
+    enabled: !!slug && enabled,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+}
+
 // ============================================
 // MUTATION HOOKS
 // ============================================
@@ -98,12 +114,13 @@ export function useUpdateEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Event> }) => {
+    mutationFn: async ({ id, slug, data }: { id: string; slug: string; data: Partial<Event> }) => {
       return await apiService.updateEvent(id, data);
     },
     onSuccess: (_, variables) => {
       // Invalidate specific event detail
       queryClient.invalidateQueries({ queryKey: eventKeys.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: [...eventKeys.details(), 'slug', variables.slug] });
       // Invalidate lists
       queryClient.invalidateQueries({ queryKey: eventKeys.myEvents() });
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
@@ -124,7 +141,7 @@ export function useDeleteEvent() {
     onSuccess: (_, id) => {
       // Remove from cache
       queryClient.removeQueries({ queryKey: eventKeys.detail(id) });
-      // Invalidate lists
+            // Invalidate lists
       queryClient.invalidateQueries({ queryKey: eventKeys.myEvents() });
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
     },

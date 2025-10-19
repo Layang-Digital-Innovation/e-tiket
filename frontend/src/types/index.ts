@@ -38,6 +38,7 @@ export interface EventOrganizer {
 // Event Types
 export interface Event {
   id: string;
+  slug: string;
   title: string;
   description: string;
   startDate: string;
@@ -45,26 +46,27 @@ export interface Event {
   location: string;
   maxCapacity: number;
   currentCapacity: number;
-  capacity: number; // Alias for maxCapacity
-  price: number;
+  imageUrl?: string;
+  basePrice?: number;
+  termsAndConditions?: string;
   isActive: boolean;
   status?: 'published' | 'draft' | 'cancelled';
   organizerId: string;
   organizer?: EventOrganizer;
-  tickets?: Ticket[];
+  ticketCategories?: TicketCategory[];
   ticketsCount?: number;
   createdAt: string;
   updatedAt: string;
 }
 
-// Ticket Types
-export interface Ticket {
+// Ticket Category Types
+export interface TicketCategory {
   id: string;
   name: string;
   description?: string;
   price: number;
   maxQuantity: number;
-  soldQuantity: number;
+  sold: number;
   isActive: boolean;
   eventId?: string;
   event?: Event;
@@ -81,7 +83,7 @@ export interface TicketPurchase {
   customerPhone: string;
   status: 'pending' | 'confirmed' | 'cancelled';
   ticketId: string;
-  ticket?: Ticket;
+  ticket?: TicketCategory;
   createdAt: string;
   updatedAt: string;
 }
@@ -110,6 +112,7 @@ export interface CreateEventRequest {
   location: string;
   maxCapacity: number;
   price: number;
+  termsAndConditions?: string;
 }
 
 export interface CreateTicketRequest {
@@ -126,4 +129,134 @@ export interface PurchaseTicketRequest {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+}
+
+// Order Types
+  export interface AttendeeDetail {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  identityType?: string;
+  identityNumber?: string;
+}
+
+export interface OrderItem {
+  categoryId: string;
+  quantity: number;
+  detailAtendee: AttendeeDetail[];
+}
+
+export interface CreateOrderRequest {
+  buyerFullName: string;
+  buyerEmail: string;
+  buyerIdentityType?: string;
+  buyerIdentityNumber?: string;
+  buyerPhoneNumber: string;
+  items: OrderItem[];
+}
+
+export interface CreateOrderResponse extends Order {
+  paymentUrl: string;
+}
+
+// Legacy - for backward compatibility
+export interface AttendeeData {
+  name: string;
+  email: string;
+  phone: string;
+  identityType?: string;
+  identityNumber?: string;
+  ticketCategoryId: string;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  eventId: string;
+  event?: Event;
+  userId?: string;
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone: string;
+  totalAmount: number;
+  status: 'pending' | 'paid' | 'cancelled' | 'expired';
+  paymentMethod?: string;
+  paymentProof?: string;
+  orderItems: OrderItemDetail[];
+  createdAt: string;
+  updatedAt: string;
+  expiresAt?: string;
+}
+
+export interface OrderItemDetail {
+  id: string;
+  ticketCategoryId: string;
+  ticketCategory?: TicketCategory;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+// Checkout State Types
+export interface CheckoutState {
+  eventId: string;
+  eventSlug: string;
+  selectedTickets: { [categoryId: string]: number };
+  attendees: AttendeeData[];
+  buyer: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  currentStep: 1 | 2 | 3;
+}
+
+// Redeem Types
+export interface RedeemRequest {
+  ticketCode: string;
+  wristbandCode: string;
+}
+
+export interface RedeemResponse {
+  message: string;
+  ticketCode: string;
+  wristbandCode: string;
+}
+
+// Check-in Types
+export interface CheckInRequest {
+  wristbandCode: string;
+}
+
+export interface CheckInResponse {
+  message: string;
+  wristbandCode: string;
+  ticketCode: string;
+  checkedInAt: string;
+}
+
+// Wristband Types
+export interface Wristband {
+  id: string;
+  wristbandCode: string;
+  status: 'unused' | 'assigned' | 'checked_in';
+  assignedAt?: string;
+  checkedInAt?: string;
+  assignedTicket?: Ticket;
+  event?: Event;
+  category?: TicketCategory;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Ticket Types
+export interface Ticket {
+  id: string;
+  ticketCode: string;
+  status: 'unused' | 'redeemed' | 'checked_in';
+  redeemedAt?: string;
+  assignedWristband?: Wristband;
+  orderItem?: OrderItemDetail;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -18,11 +18,13 @@ export class RedeemController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   findAll() {
     return this.redeemService.findAll();
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   findOne(@Param('id') id: string) {
     return this.redeemService.findOne(id);
   }

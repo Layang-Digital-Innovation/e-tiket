@@ -48,4 +48,11 @@ export class TicketCategoriesController {
   remove(@Param('id') id: string) {
     return this.ticketCategoriesService.remove(id);
   }
+
+  @Patch(':id/toggle-status')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.EVENT_ORGANIZER)
+  toggleTicketStatus(@Param('id') id: string) {
+    return this.ticketCategoriesService.toggleTicketStatus(id);
+  }
 }

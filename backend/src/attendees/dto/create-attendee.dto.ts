@@ -11,11 +11,12 @@ export class CreateAttendeeDto {
     email: string;
 
     @IsString()
-    identityType: string;
+    @IsOptional()
+    identityType?: string;
 
     @IsString()
-    @IsNotEmpty()
-    identityNumber: string;
+    @IsOptional()
+    identityNumber?: string;
 
     @IsPhoneNumber("ID")
     @IsNotEmpty()

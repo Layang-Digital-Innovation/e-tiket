@@ -28,7 +28,11 @@ export class OrderItem extends AuditEntity {
   order: Order;
 
   // Hubungan ke kategori tiket
-  @ManyToOne(() => TicketCategory, { eager: true, nullable: false })
+  @ManyToOne(() => TicketCategory, { 
+    eager: true, 
+    nullable: false,
+    onDelete: 'RESTRICT'
+  })
   @JoinColumn({ name: 'ticket_category_id' })
   ticketCategory: TicketCategory;
 

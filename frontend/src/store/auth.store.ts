@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { apiService } from '@/services/api';
 import { User, LoginRequest } from '@/types';
+import { getQueryClient } from '@/lib/react-query';
 
 interface AuthState {
   user: User | null;
@@ -111,6 +112,11 @@ export const useAuthStore = create<AuthStore>()(
           
           // Clear local storage
           localStorage.removeItem('auth-storage');
+          
+          // Clear all React Query cache
+          const queryClient = getQueryClient();
+          queryClient.clear();
+          console.log('✅ React Query cache cleared');
           
           set({
             user: null,

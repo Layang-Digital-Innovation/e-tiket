@@ -17,6 +17,7 @@ import { OrderItem } from 'src/order_item/entities/order_item.entity';
 import { Attendee } from 'src/attendees/entities/attendee.entity';
 import { PaymentService } from 'src/payment/payment.service';
 import { EventsService } from 'src/events/events.service';
+import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
 
 @Injectable()
 export class OrderService {
@@ -53,14 +54,38 @@ export class OrderService {
       const savedOrder = await queryRunner.manager.save(order);
 
       for (const item of createOrderDto.items) {
-        const category = await this.ticketCategoryService.findOneOrThrow(
-          item.categoryId,
-        );
+        // Lock ticket category row to prevent race condition
+        const category = await queryRunner.manager.findOne(TicketCategory, {
+          where: { id: item.categoryId },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!category) {
+          throw new NotFoundException(
+            `Ticket category ${item.categoryId} not found`,
+          );
+        }
+
+        // Check if category is active
+        if (!category.isActive) {
+          throw new BadRequestException(
+            `Ticket category ${category.name} is not active`,
+          );
+        }
+
+        // Check availability with locked data (including reserved tickets)
+        const available = category.maxQuantity - category.sold - category.reserved;
+        if (available < item.quantity) {
+          throw new BadRequestException(
+            `Not enough tickets available for ${category.name}. Available: ${available}, Requested: ${item.quantity}`,
+          );
+        }
 
         await this.eventValidationService.validateEventId(category.eventId);
-        await this.ticketCategoryValidationService.validateCategoryAvailable(
-          category.id,
-        );
+
+        // Reserve tickets for this pending order
+        category.reserved += item.quantity;
+        await queryRunner.manager.save(category);
 
         const subtotal = Number(category.price) * item.quantity;
         totalAmount += subtotal;

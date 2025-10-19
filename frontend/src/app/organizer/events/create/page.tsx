@@ -17,8 +17,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Popover,
@@ -42,6 +42,7 @@ const eventFormSchema = z.object({
   startTime: z.string().min(1, 'Waktu mulai wajib diisi'),
   endTime: z.string().min(1, 'Waktu selesai wajib diisi'),
   imageUrl: z.string().optional(),
+  termsAndConditions: z.string().optional(),
 }).refine(data => {
   const startDateTime = new Date(data.startDate);
   const endDateTime = new Date(data.endDate);
@@ -64,6 +65,7 @@ export default function CreateEventPage() {
       startTime: '08:00',
       endTime: '17:00',
       imageUrl: '',
+      termsAndConditions: '',
     },
   });
 
@@ -90,6 +92,7 @@ export default function CreateEventPage() {
         startDate: startDateTime.toISOString(),
         endDate: endDateTime.toISOString(),
         imageUrl: values.imageUrl || undefined,
+        termsAndConditions: values.termsAndConditions || undefined,
       };
 
       await apiService.createEvent(eventData);
@@ -106,11 +109,6 @@ export default function CreateEventPage() {
       <div className="container max-w-screen-lg mx-auto py-6 sm:px-6 lg:px-10">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-8">
-            <div className="flex items-center space-x-4 mb-4">
-              <Link href="/eo/events" className="text-gray-600 hover:text-gray-900">
-                ← Kembali ke Daftar Event
-              </Link>
-            </div>
             <h1 className="text-3xl font-bold text-gray-900">Buat Event Baru</h1>
             <p className="mt-2 text-gray-600">
               Isi informasi lengkap untuk event yang akan Anda buat
@@ -145,7 +143,11 @@ export default function CreateEventPage() {
                         <FormItem>
                           <FormLabel>Deskripsi Event *</FormLabel>
                           <FormControl>
-                            <Textarea rows={4} placeholder="Jelaskan detail event Anda" {...field} />
+                            <RichTextEditor
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Jelaskan detail event Anda dengan format yang menarik..."
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -163,6 +165,27 @@ export default function CreateEventPage() {
                           </FormControl>
                           <FormDescription>
                             Opsional. Masukkan URL gambar untuk poster event
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="termsAndConditions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Syarat dan Ketentuan</FormLabel>
+                          <FormControl>
+                            <RichTextEditor
+                              value={field.value || ''}
+                              onChange={field.onChange}
+                              placeholder="Masukkan syarat dan ketentuan event (opsional)..."
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Opsional. Syarat dan ketentuan yang berlaku untuk event ini
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -223,7 +246,6 @@ export default function CreateEventPage() {
                                   disabled={(date: Date) =>
                                     date < new Date() || date < new Date("1900-01-01")
                                   }
-                                  initialFocus
                                 />
                               </PopoverContent>
                             </Popover>
@@ -265,7 +287,6 @@ export default function CreateEventPage() {
                                   disabled={(date: Date) =>
                                     date < new Date() || date < new Date("1900-01-01")
                                   }
-                                  initialFocus
                                 />
                               </PopoverContent>
                             </Popover>

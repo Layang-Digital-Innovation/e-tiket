@@ -206,8 +206,13 @@ async handlePaymentSuccess(callbackData: CallbackSuccessDto) {
     for (const item of order.orderItems) {
       const category = item.ticketCategory;
 
-      // update sold count
+      // Move from reserved to sold
+      category.reserved -= item.quantity;
       category.sold += item.quantity;
+      
+      // Prevent negative reserved
+      if (category.reserved < 0) category.reserved = 0;
+      
       await queryRunner.manager.save(category);
 
       // collect tickets untuk tiap attendee

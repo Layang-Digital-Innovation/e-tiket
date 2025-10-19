@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsArray, IsEmail, IsNotEmpty, IsPhoneNumber, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsPhoneNumber, IsString, ValidateNested } from "class-validator";
 import { CreateOrderItemDto } from "src/order_item/dto/create-order_item.dto";
 
 export class CreateOrderDto {
@@ -15,11 +15,12 @@ export class CreateOrderDto {
     buyerEmail: string;
 
     @IsString()
-    buyerIdentityType: string;
+    @IsOptional()
+    buyerIdentityType?: string;
 
     @IsString()
-    @IsNotEmpty()
-    buyerIdentityNumber: string;
+    @IsOptional()
+    buyerIdentityNumber?: string;
 
     @IsPhoneNumber("ID")
     @IsNotEmpty()

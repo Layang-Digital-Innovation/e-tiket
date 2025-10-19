@@ -9,10 +9,12 @@ import { TicketCategoriesModule } from 'src/ticket_categories/ticket_categories.
 import { EventsModule } from 'src/events/events.module';
 import { AttendeesModule } from 'src/attendees/attendees.module';
 import { PaymentModule } from 'src/payment/payment.module';
+import { OrderCleanupService } from './order-cleanup.service';
+import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Order]),
+    TypeOrmModule.forFeature([Order, TicketCategory]),
     forwardRef(() => OrderItemModule),
     TicketModule,
     TicketCategoriesModule,
@@ -21,7 +23,7 @@ import { PaymentModule } from 'src/payment/payment.module';
     PaymentModule
   ],
   controllers: [OrderController],
-  providers: [OrderService],
+  providers: [OrderService, OrderCleanupService],
   exports: [OrderService],
 })
 export class OrderModule {}

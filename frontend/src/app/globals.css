@@ -1,5 +1,7 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 @import "tw-animate-css";
+
 
 @custom-variant dark (&:is(.dark *));
 
@@ -120,4 +122,37 @@
   body {
     @apply bg-background text-foreground font-sans;
   }
+  
+  /* Smooth page transitions */
+  main {
+    animation: fadeIn 0.15s ease-in;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
+
+/* Rich Text Editor Styles - Using Tailwind Prose */
+/* .rich-text-editor .ProseMirror {
+  @apply prose prose-sm max-w-none;
+  @apply prose-headings:font-bold prose-headings:text-gray-900;
+  @apply prose-h1:text-3xl prose-h1:mb-4 prose-h1:mt-4;
+  @apply prose-h2:text-2xl prose-h2:mb-3 prose-h2:mt-3;
+  @apply prose-h3:text-xl prose-h3:mb-2 prose-h3:mt-2;
+  @apply prose-p:my-2 prose-p:text-gray-700;
+  @apply prose-ul:list-disc prose-ul:pl-6 prose-ul:my-2;
+  @apply prose-ol:list-decimal prose-ol:pl-6 prose-ol:my-2;
+  @apply prose-li:my-1;
+  @apply prose-a:text-blue-600 prose-a:underline;
+  @apply prose-strong:font-bold prose-strong:text-gray-900;
+  @apply prose-em:italic;
+  outline: none;
+} */

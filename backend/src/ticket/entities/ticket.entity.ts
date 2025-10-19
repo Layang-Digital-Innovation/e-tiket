@@ -59,7 +59,10 @@ export class Ticket extends AuditEntity {
   orderItem: OrderItem;
 
 
-  @ManyToOne(() => TicketCategory, { eager: true })
+  @ManyToOne(() => TicketCategory, { 
+    eager: true,
+    onDelete: 'RESTRICT'
+  })
   @JoinColumn({ name: 'category_id' })
   category: TicketCategory;
 

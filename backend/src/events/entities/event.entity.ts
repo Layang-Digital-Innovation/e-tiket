@@ -46,6 +46,9 @@ export class Event extends AuditEntity {
   @Column({ nullable: true, name : "image_url" })
   imageUrl: string;
 
+  @Column({ type: 'text', nullable: true, name: "terms_and_conditions" })
+  termsAndConditions?: string;
+
   @Column({
     type: 'enum',
     enum: EventStatus,

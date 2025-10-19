@@ -1,6 +1,15 @@
 import Link from 'next/link';
 import { Event } from '@/types';
 import { Calendar, MapPin, Users, DollarSign } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
+
+// Helper function to strip HTML tags and get plain text
+function stripHtml(html: string): string {
+  // Remove HTML tags
+  const text = html.replace(/<[^>]*>/g, ' ');
+  // Replace multiple spaces with single space
+  return text.replace(/\s+/g, ' ').trim();
+}
 
 interface EventCardProps {
   event: Event;
@@ -15,7 +24,6 @@ export function EventCard({
   isDeleting = false,
   showActions = true 
 }: EventCardProps) {
-  const progress = ((event.currentCapacity || 0) / (event.capacity || event.maxCapacity || 1)) * 100;
   
   const statusColors = {
     published: 'bg-green-100 text-green-800',
@@ -50,7 +58,7 @@ export function EventCard({
 
         {/* Description */}
         <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-          {event.description}
+          {stripHtml(event.description)}
         </p>
 
         {/* Info Grid */}
@@ -71,36 +79,15 @@ export function EventCard({
             <span className="truncate">{event.location}</span>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Users className="h-4 w-4 text-gray-400" />
-            <span>
-              {event.currentCapacity || 0} / {event.capacity || event.maxCapacity}
-            </span>
-          </div>
+
 
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <DollarSign className="h-4 w-4 text-gray-400" />
-            <span>Rp {event.price?.toLocaleString('id-ID') || 0}</span>
+            Harga Tiket Mulai Dari :
+            <span>{formatCurrency(event.basePrice || 0)}</span>
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-medium text-gray-700">
-              Penjualan Tiket
-            </span>
-            <span className="text-xs text-gray-500">
-              {Math.round(progress)}%
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-blue-600 h-2 rounded-full transition-all"
-              style={{ width: `${Math.min(progress, 100)}%` }}
-            />
-          </div>
-        </div>
+
 
         {/* Actions */}
         {showActions && (
@@ -110,19 +97,19 @@ export function EventCard({
             </div>
             <div className="flex items-center gap-3">
               <Link
-                href={`/organizer/events/${event.id}`}
+                href={`/organizer/events/${event.slug}`}
                 className="text-sm font-medium text-blue-600 hover:text-blue-700"
               >
                 Detail
               </Link>
               <Link
-                href={`/organizer/events/${event.id}/tickets`}
+                href={`/organizer/events/${event.slug}/tickets`}
                 className="text-sm font-medium text-green-600 hover:text-green-700"
               >
                 Tiket
               </Link>
               <Link
-                href={`/organizer/events/${event.id}/edit`}
+                href={`/organizer/events/${event.slug}/edit`}
                 className="text-sm font-medium text-gray-600 hover:text-gray-700"
               >
                 Edit

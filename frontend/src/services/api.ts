@@ -1,4 +1,4 @@
-import { ApiResponse, User } from '@/types';
+import { ApiResponse, User, CreateOrderRequest, CreateOrderResponse, CheckInResponse, Wristband, RedeemRequest, RedeemResponse } from '@/types';
 import axios, { AxiosRequestConfig, AxiosError } from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
@@ -59,7 +59,11 @@ class ApiService {
   }
 
   async getEvent(id: string) {
-    return this.request(`/api/event/${id}`);
+    return this.request(`/api/event/id/${id}`);
+  }
+
+  async getEventBySlug(slug: string) {
+    return this.request(`/api/event/${slug}`);
   }
 
   async createEvent(eventData: any) {
@@ -70,14 +74,14 @@ class ApiService {
   }
 
   async updateEvent(id: string, eventData: any) {
-    return this.request(`/api/event/${id}`, {
+    return this.request(`/api/event/id/${id}`, {
       method: 'PATCH',
       data: eventData,
     });
   }
 
   async deleteEvent(id: string) {
-    return this.request(`/api/event/${id}`, {
+    return this.request(`/api/event/id/${id}`, {
       method: 'DELETE',
     });
   }
@@ -96,39 +100,45 @@ class ApiService {
   }
 
   // Tickets API
-  async getTickets(eventId: string) {
-    return this.request(`/api/ticket?eventId=${eventId}`);
+  async getTicketsCategoryByEventId(eventId: string) {
+    return this.request(`/api/ticket-categories/event/${eventId}`);
   }
 
-  async createTicket(ticketData: any) {
-    return this.request('/api/ticket', {
+  async createTicketCategory(ticketData: any) {
+    return this.request('/api/ticket-categories', {
       method: 'POST',
       data: ticketData,
     });
   }
 
-  async updateTicket(id: string, ticketData: any) {
-    return this.request(`/api/ticket/${id}`, {
+  async updateTicketCategory(id: string, ticketData: any) {
+    return this.request(`/api/ticket-categories/${id}`, {
       method: 'PATCH',
       data: ticketData,
     });
   }
 
-  async deleteTicket(id: string) {
-    return this.request(`/api/ticket/${id}`, {
+  async deleteTicketCategory(id: string) {
+    return this.request(`/api/ticket-categories/${id}`, {
       method: 'DELETE',
     });
   }
 
-  // Orders/Purchases API
-  async createPurchase(purchaseData: any) {
-    return this.request('/api/order', {
-      method: 'POST',
-      data: purchaseData,
+  async toggleTicketCategoryStatus(id: string) {
+    return this.request(`/api/ticket-categories/${id}/toggle-status`, {
+      method: 'PATCH',
     });
   }
 
-  async getPurchases(params?: {
+  // Orders/Purchases API
+  async createOrder(orderData: CreateOrderRequest): Promise<ApiResponse<CreateOrderResponse>> {
+    return this.request<ApiResponse<CreateOrderResponse>>('/api/order', {
+      method: 'POST',
+      data: orderData,
+    });
+  }
+
+  async getOrders(params?: {
     page?: number;
     limit?: number;
   }) {
@@ -138,6 +148,23 @@ class ApiService {
     
     const query = searchParams.toString();
     return this.request(`/api/order${query ? `?${query}` : ''}`);
+  }
+
+  async getOrder(id: string) {
+    return this.request(`/api/order/${id}`);
+  }
+
+  async getOrderByNumber(orderNumber: string) {
+    return this.request(`/api/order/number/${orderNumber}`);
+  }
+
+  // Legacy - keep for backward compatibility
+  async createPurchase(purchaseData: any) {
+    return this.createOrder(purchaseData);
+  }
+
+  async getPurchases(params?: { page?: number; limit?: number }) {
+    return this.getOrders(params);
   }
 
   // Auth API
@@ -172,6 +199,34 @@ class ApiService {
     const response = await this.request<ApiResponse<User>>('/api/auth/profile');
     console.log('📥 API Service: Profile response received:', response);
     return response;
+  }
+
+  // Redeem API
+  async redeemTicket(redeemData: RedeemRequest): Promise<RedeemResponse> {
+    return this.request<RedeemResponse>('/api/redeem', {
+      method: 'POST',
+      data: redeemData,
+    });
+  }
+
+  async getRedeemList(): Promise<Wristband[]> {
+    return this.request<Wristband[]>('/api/redeem');
+  }
+
+  async getRedeemById(id: string): Promise<Wristband> {
+    return this.request<Wristband>(`/api/redeem/${id}`);
+  }
+
+  // Check-in API
+  async checkIn(checkInData: { wristbandCode: string }): Promise<CheckInResponse> {
+    return this.request<CheckInResponse>('/api/check-in', {
+      method: 'POST',
+      data: checkInData,
+    });
+  }
+
+  async getAssignedWristbands(): Promise<Wristband[]> {
+    return this.request<Wristband[]>('/api/check-in');
   }
 }
 

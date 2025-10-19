@@ -87,6 +87,7 @@ export interface CreateEventRequest {
   endDate: string;
   location: string;
   imageUrl?: string;
+  termsAndConditions?: string;
 }
 
 export interface CreateTicketRequest {

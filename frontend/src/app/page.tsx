@@ -26,9 +26,15 @@ export default function Home() {
               <h2 className="text-3xl font-pt-serif md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
                 Event Unggulan
               </h2>
-              <p className="text-xl font-heebo text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              <p className="text-xl font-heebo text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-6">
                 ayo join event unggulan kami dan nikmati pengalaman event terbaru!
               </p>
+              <Link href="/events">
+                <Button variant="outline" className="text-primary border-primary hover:bg-primary hover:text-white">
+                  Jelajahi Semua Event
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
             </div>
             
             {/* Single Featured Event - Full Width Banner */}

@@ -169,10 +169,11 @@ export class EventsService {
       throw new ForbiddenException('You can only delete your own events');
     }
 
-    // Check if event has ended
-    const currentDate = new Date();
-    if (currentDate < event.endDate) {
-      throw new BadRequestException('Cannot delete event before it has ended');
+    // Check if event is published
+    if (event.status === EventStatus.PUBLISHED) {
+      throw new BadRequestException(
+        'Cannot delete published event. Please change status to draft or cancelled first.',
+      );
     }
 
     // Delete related ticket categories first
@@ -200,5 +201,26 @@ export class EventsService {
       status,
     });
     return this.findOne(id);
+  }
+
+  /**
+   * Update basePrice event dengan harga termurah dari ticket categories
+   */
+  async updateBasePrice(eventId: string): Promise<void> {
+    const ticketCategories = await this.ticketCategoriesRepository.find({
+      where: { eventId },
+    });
+
+    if (ticketCategories.length === 0) {
+      // Jika tidak ada ticket category, set basePrice ke 0
+      await this.eventsRepository.update(eventId, { basePrice: 0 });
+      return;
+    }
+
+    // Cari harga termurah dari semua ticket categories
+    const minPrice = Math.min(...ticketCategories.map(tc => tc.price));
+
+    // Update basePrice event
+    await this.eventsRepository.update(eventId, { basePrice: minPrice });
   }
 }

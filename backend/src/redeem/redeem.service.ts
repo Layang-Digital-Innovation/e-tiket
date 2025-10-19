@@ -7,6 +7,12 @@ import { TicketStatus } from 'src/ticket/entities/ticket.entity';
 import { Wristband, WristbandStatus } from 'src/wristband/entities/wristband.entity';
 import { DataSource } from 'typeorm';
 
+export interface RedeemResponse {
+  message: string;
+  ticketCode: string;
+  wristbandCode: string;
+}
+
 @Injectable()
 export class RedeemService {
 
@@ -16,7 +22,7 @@ export class RedeemService {
     private readonly wristbandService: WristbandService,
   ) {}
 
-  async redeemTicketToWristband(ticketCode: string, wristbandCode: string) {
+  async redeemTicketToWristband(ticketCode: string, wristbandCode: string): Promise<RedeemResponse> {
     return this.dataSource.transaction(async (manager) => {
       const ticket = await this.ticketService.findOneByCode(ticketCode, manager);
       const wristband = await this.wristbandService.findOneByCode(wristbandCode, manager);
@@ -43,11 +49,15 @@ export class RedeemService {
       return {
         message: 'Ticket successfully redeemed to wristband',
         ticketCode: ticket.ticketCode,
-        wristbandCode: wristband.wristbandCode,
+        wristbandCode: wristband.wristbandCode!,
       };
     });
   }
-  findAll() {
+  /**
+   * Get all assigned wristbands (redeemed tickets)
+   * Returns list of wristbands with status ASSIGNED
+   */
+  async findAll(): Promise<Wristband[]> {
     return this.dataSource.getRepository(Wristband).find({
       where: { status: WristbandStatus.ASSIGNED },
       relations: ['assignedTicket', 'event', 'category'],
@@ -55,7 +65,10 @@ export class RedeemService {
     });
   }
 
-  findOne(id: string) {
+  /**
+   * Get a specific assigned wristband by ID
+   */
+  async findOne(id: string): Promise<Wristband | null> {
     return this.dataSource.getRepository(Wristband).findOne({
       where: { id, status: WristbandStatus.ASSIGNED },
       relations: ['assignedTicket', 'event', 'category'],

@@ -45,6 +45,10 @@ export class CreateEventDto extends AuditDto {
   @IsOptional()
   imageUrl?: string;
 
+  @IsString()
+  @IsOptional()
+  termsAndConditions?: string;
+
   @IsEnum(EventStatus)
   @IsOptional()
   status?: EventStatus;
