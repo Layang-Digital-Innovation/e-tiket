@@ -1,19 +1,33 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
+import { RichTextDisplay } from '@/components/ui/rich-text-display';
+import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useEventBySlug } from '@/hooks/useEvents';
 import PublicLayout from '@/components/layouts/PublicLayout';
-import { Calendar, MapPin, Users, Clock, Ticket, ChevronRight, Minus, Plus } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, Ticket, ChevronRight, Minus, Plus, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils';
 import { TicketCategory } from '@/types';
+import { useCheckoutStore } from '@/store/checkout.store';
 
 export default function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const router = useRouter();
-  const { data: event, isLoading, error } = useEventBySlug(slug);
+  const { data: event, isLoading, error, dataUpdatedAt } = useEventBySlug(slug);
+  const { setCheckoutSession } = useCheckoutStore();
   
   const [selectedTickets, setSelectedTickets] = useState<{ [categoryId: string]: number }>({});
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
+
+  // Track when data was last updated
+  useEffect(() => {
+    if (dataUpdatedAt) {
+      setLastUpdateTime(new Date(dataUpdatedAt));
+    }
+  }, [dataUpdatedAt]);
 
   const handleQuantityChange = (categoryId: string, change: number) => {
     const category = event?.ticketCategories?.find((t: TicketCategory) => t.id === categoryId);
@@ -47,16 +61,19 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
   };
 
   const handleCheckout = () => {
-    if (getTotalTickets() === 0) return;
+    if (getTotalTickets() === 0 || !event) return;
     
-    // Save to sessionStorage
-    sessionStorage.setItem('checkout', JSON.stringify({
-      eventId: event?.id,
+    // Create checkout session using Zustand store
+    const checkoutSession = {
+      eventId: event.id,
       eventSlug: slug,
       selectedTickets,
-      currentStep: 1,
-    }));
+      attendees: [], // Will be populated in checkout page
+      buyer: { name: '', email: '', phone: '' }, // Will be filled in checkout page
+      currentStep: 1 as const,
+    };
     
+    setCheckoutSession(checkoutSession);
     router.push(`/checkout/${slug}`);
   };
 
@@ -79,21 +96,18 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <p className="text-red-600 text-lg">Event tidak ditemukan</p>
-            <button
+            <Button
               onClick={() => router.push('/events')}
               className="mt-4 text-blue-600 hover:text-blue-700"
             >
               Kembali ke daftar event
-            </button>
+            </Button>
           </div>
         </div>
       </PublicLayout>
     );
   }
 
-  const stripHtml = (html: string) => {
-    return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-  };
 
   return (
     <PublicLayout>
@@ -106,9 +120,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                 <h1 className="text-4xl md:text-5xl font-bold mb-4">
                   {event.title}
                 </h1>
-                <p className="text-xl text-blue-100 mb-6">
-                  {stripHtml(event.description).substring(0, 150)}...
-                </p>
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
                     <Calendar className="h-5 w-5 mr-2" />
@@ -152,8 +163,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
                   Tentang Event
                 </h2>
+                <Separator className="my-4"/>
                 <div className="prose max-w-none text-gray-700">
-                  <p>{stripHtml(event.description)}</p>
+                  <RichTextDisplay content={event.description} />
                 </div>
               </div>
 
@@ -196,15 +208,27 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                 </div>
               </div>
 
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Syarat & Ketentuan
+                </h2>
+                <Separator className="my-4"/>
+                <div className="prose max-w-none text-gray-700">
+                  <RichTextDisplay content={event.termsAndConditions as string} />
+                </div>
+              </div>
+
               {/* Tickets Section */}
               <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  Pilih Tiket
-                </h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Pilih Tiket
+                  </h2>
+                </div>
                 <div className="space-y-4">
                   {event.ticketCategories && event.ticketCategories.length > 0 ? (
                     event.ticketCategories.map((category: TicketCategory) => {
-                      const available = category.maxQuantity - category.sold;
+                      const available = category.maxQuantity - category.sold - category.reserved;
                       const isAvailable = available > 0 && category.isActive;
                       const selectedQty = selectedTickets[category.id] || 0;
 
@@ -215,22 +239,37 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                             isAvailable ? 'border-gray-200' : 'border-gray-100 bg-gray-50'
                           }`}
                         >
+                          <div className="flex items-center justify-between mb-2 pb-4 border-b border-dashed">
+                            <h1 className='text-lg font-semibold text-gray-700'>{category.name}</h1>
+                          </div>
+
+
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex-1">
-                              <h3 className="text-lg font-semibold text-gray-900">
-                                {category.name}
-                              </h3>
                               {category.description && (
-                                <p className="text-sm text-gray-600 mt-1">
-                                  {category.description}
-                                </p>
+                                <div className="text-sm text-gray-600 mt-1">
+                                  <RichTextDisplay content={category.description} />
+                                </div>
                               )}
-                              <p className="text-sm text-gray-500 mt-2">
-                                {isAvailable ? `${available} tiket tersisa` : 'Sold out'}
-                              </p>
+                              <div className="flex items-center gap-2 mt-2">
+                                {isAvailable ? (
+                                  <Badge variant="success" className="bg-green-100 text-green-800 border-green-200">
+                                    {available} tersisa
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="danger" className="bg-red-100 text-red-800 border-red-200">
+                                    Sold Out
+                                  </Badge>
+                                )}
+                                {isAvailable && available <= 10 && (
+                                  <Badge variant="warning" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                                    Hampir Habis
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                             <div className="text-right ml-4">
-                              <p className="text-2xl font-bold text-blue-600">
+                              <p className="text-2xl font-bold text-violet-600">
                                 {formatCurrency(category.price)}
                               </p>
                             </div>
@@ -240,23 +279,23 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                             <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
                               <span className="text-sm text-gray-600">Jumlah:</span>
                               <div className="flex items-center gap-3">
-                                <button
+                                <Button
                                   onClick={() => handleQuantityChange(category.id, -1)}
                                   disabled={selectedQty === 0}
-                                  className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="w-8 h-8 rounded-full cursor-pointer border border-gray-300 flex items-center justify-center  disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   <Minus className="h-4 w-4" />
-                                </button>
+                                </Button>
                                 <span className="w-12 text-center font-semibold">
                                   {selectedQty}
                                 </span>
-                                <button
+                                <Button
                                   onClick={() => handleQuantityChange(category.id, 1)}
                                   disabled={selectedQty >= Math.min(available, 10)}
-                                  className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="w-8 h-8 cursor-pointer  rounded-full border border-gray-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   <Plus className="h-4 w-4" />
-                                </button>
+                                </Button>
                               </div>
                             </div>
                           )}
@@ -278,6 +317,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
                   Ringkasan Pesanan
                 </h3>
+                <Separator className="my-4"/>
                 
                 {getTotalTickets() === 0 ? (
                   <p className="text-gray-600 text-center py-8">
@@ -303,10 +343,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                       })}
                     </div>
 
-                    <div className="border-t border-gray-200 pt-4 mb-6">
+                    <div className="border-t border-dashed border-gray-200 pt-4 mb-6">
                       <div className="flex justify-between items-center">
                         <span className="text-lg font-semibold text-gray-900">Total</span>
-                        <span className="text-2xl font-bold text-blue-600">
+                        <span className="text-2xl font-bold text-violet-600">
                           {formatCurrency(getTotalPrice())}
                         </span>
                       </div>
@@ -315,13 +355,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                       </p>
                     </div>
 
-                    <button
+                    <Button
                       onClick={handleCheckout}
                       className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center"
                     >
                       Lanjut ke Checkout
                       <ChevronRight className="h-5 w-5 ml-2" />
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>

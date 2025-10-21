@@ -94,7 +94,11 @@ export class TicketCategoriesService {
 
   async update(id: string, updateTicketCategoryDto: UpdateTicketCategoryDto) {
     const ticketCategory = await this.findOneOrThrow(id);
+    const oldMaxQuantity = ticketCategory.maxQuantity;
+    
     await this.ticketCategoriesRepository.update(id, updateTicketCategoryDto);
+    
+    const updatedCategory = await this.findOneOrThrow(id);
     
     // Update basePrice event jika harga berubah
     if (updateTicketCategoryDto.price !== undefined) {
@@ -102,7 +106,20 @@ export class TicketCategoriesService {
       this.logger.log(`💰 Updated event basePrice for event ${ticketCategory.eventId}`);
     }
     
-    return this.findOneOrThrow(id);
+    // Generate additional wristbands jika maxQuantity bertambah
+    if (updateTicketCategoryDto.maxQuantity !== undefined && updateTicketCategoryDto.maxQuantity > oldMaxQuantity) {
+      const additionalWristbands = updateTicketCategoryDto.maxQuantity - oldMaxQuantity;
+      await this.wristbandService.generateWristbandByMaxCapacity(
+        additionalWristbands,
+        ticketCategory.eventId,
+        ticketCategory.id,
+      );
+      this.logger.log(
+        `🪪 Generated ${additionalWristbands} additional wristbands for category ${ticketCategory.id} (total now: ${updateTicketCategoryDto.maxQuantity})`,
+      );
+    }
+    
+    return updatedCategory;
   }
 
   async remove(id: string) {

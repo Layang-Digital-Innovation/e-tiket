@@ -118,7 +118,6 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
         },
       });
 
-      alert('Event berhasil diupdate!');
       router.push(`/organizer/events/${event.slug}`);
     } catch (error: any) {
       console.error('Failed to update event:', error);

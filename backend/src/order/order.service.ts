@@ -12,12 +12,15 @@ import { DataSource, Repository } from 'typeorm';
 import { EventsValidationService } from 'src/events/validation/validation.service';
 import { TicketCategoriesService } from 'src/ticket_categories/ticket_categories.service';
 import { TicketCategoriesValidationService } from 'src/ticket_categories/validation/validation.service';
-import { ApiResponseDto } from 'src/common/dto/api-response.dto';
+import { InjectQueue } from '@nestjs/bull';
+import { ExpireOrderJobData } from './order-expiration.processor';
 import { OrderItem } from 'src/order_item/entities/order_item.entity';
 import { Attendee } from 'src/attendees/entities/attendee.entity';
 import { PaymentService } from 'src/payment/payment.service';
 import { EventsService } from 'src/events/events.service';
 import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
+import { ApiResponseDto } from 'src/common/dto/api-response.dto';
+import type { Queue } from 'bull';
 
 @Injectable()
 export class OrderService {
@@ -30,6 +33,8 @@ export class OrderService {
     private readonly eventsService: EventsService,
     private readonly paymentService: PaymentService,
     private readonly dataSource: DataSource,
+    @InjectQueue('order-expiration')
+    private readonly orderExpirationQueue: Queue<ExpireOrderJobData>,
   ) {}
 
   async createOrder(createOrderDto: CreateOrderDto) {
@@ -158,6 +163,23 @@ export class OrderService {
 
       Logger.log('Invoice :', invoice);
 
+      // Schedule order expiration job (15 minutes = 900 seconds)
+      try {
+        await this.orderExpirationQueue.add(
+          'expire-order',
+          { orderId: savedOrder.id },
+          {
+            delay: 15 * 60 * 1000, // 15 minutes in milliseconds
+            removeOnComplete: true,
+            removeOnFail: 3,
+          }
+        );
+        Logger.log(`Scheduled expiration job for order ${savedOrder.id} in 15 minutes`);
+      } catch (jobError) {
+        Logger.error(`Failed to schedule expiration job for order ${savedOrder.id}:`, jobError);
+        // Don't fail the order creation if job scheduling fails
+      }
+
       const finalOrder = await this.orderRepository.findOne({
         where: { id: savedOrder.id },
         relations: [
@@ -217,5 +239,83 @@ export class OrderService {
     return ApiResponseDto.success({
       message: 'Order removed successfully',
     });
+  }
+
+  /**
+   * Expire an order and release reserved tickets back to available
+   */
+  async expireOrder(orderId: string): Promise<void> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Find order with relations
+      const order = await queryRunner.manager.findOne(Order, {
+        where: { id: orderId },
+        relations: ['orderItems', 'orderItems.ticketCategory'],
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!order) {
+        throw new NotFoundException(`Order with ID ${orderId} not found`);
+      }
+
+      // Only expire if status is still PENDING
+      if (order.status !== OrderStatus.PENDING) {
+        Logger.log(`Order ${orderId} is not in PENDING status (${order.status}), skipping expiration`);
+        await queryRunner.rollbackTransaction();
+        return;
+      }
+
+      // Release reserved tickets for each order item
+      for (const orderItem of order.orderItems) {
+        const category = orderItem.ticketCategory;
+
+        // Lock category to prevent race conditions
+        const lockedCategory = await queryRunner.manager.findOne(TicketCategory, {
+          where: { id: category.id },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (lockedCategory) {
+          // Release reserved tickets
+          lockedCategory.reserved = Math.max(0, lockedCategory.reserved - orderItem.quantity);
+          await queryRunner.manager.save(lockedCategory);
+
+          Logger.log(`Released ${orderItem.quantity} reserved tickets for category ${category.name}`);
+        }
+      }
+
+      // Update order status to EXPIRED
+      order.status = OrderStatus.EXPIRED;
+      await queryRunner.manager.save(order);
+
+      await queryRunner.commitTransaction();
+
+      Logger.log(`Successfully expired order ${orderId} and released ${order.orderItems.reduce((sum, item) => sum + item.quantity, 0)} reserved tickets`);
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      Logger.error(`Failed to expire order ${orderId}:`, error);
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+   async cancelExpirationJob(orderId: string): Promise<void> {
+    try {
+      const jobs = await this.orderExpirationQueue.getJobs(['delayed', 'waiting']);
+      const relevantJob = jobs.find(job => job.data.orderId === orderId);
+
+      if (relevantJob) {
+        await relevantJob.remove();
+        Logger.log(`Cancelled expiration job for order ${orderId}`);
+      }
+    } catch (error) {
+      Logger.error(`Failed to cancel expiration job for order ${orderId}:`, error);
+      // Jangan throw error, karena payment sudah berhasil
+    }
   }
 }

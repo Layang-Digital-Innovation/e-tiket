@@ -44,11 +44,11 @@ export default function EOEventDetailPage({ params }: { params: Promise<{ slug: 
   const chartConfig = {
     terjual: {
       label: 'Terjual',
-      color: 'hsl(var(--chart-1))',
+      color: 'var(--chart-1)',
     },
     tersisa: {
       label: 'Tersisa',
-      color: 'hsl(var(--chart-2))',
+      color: 'var(--chart-2)',
     },
   };
 
@@ -235,13 +235,13 @@ export default function EOEventDetailPage({ params }: { params: Promise<{ slug: 
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis 
                         dataKey="name" 
-                        tickLine={false}
-                        axisLine={false}
+                        tickLine={true}
+                        axisLine={true}
                         className="text-xs"
                       />
                       <YAxis 
-                        tickLine={false}
-                        axisLine={false}
+                        tickLine={true}
+                        axisLine={true}
                         className="text-xs"
                       />
                       <ChartTooltip content={<ChartTooltipContent />} />
@@ -410,20 +410,17 @@ export default function EOEventDetailPage({ params }: { params: Promise<{ slug: 
                   <CardTitle>Aksi Cepat</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-secondary rounded-md transition-colors flex items-center gap-2">
-                    📊 <span>Lihat Laporan Penjualan</span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-secondary rounded-md transition-colors flex items-center gap-2">
-                    📧 <span>Kirim Email ke Peserta</span>
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-secondary rounded-md transition-colors flex items-center gap-2">
-                    📥 <span>Export Data Peserta</span>
-                  </button>
+                  <Link
+                    href={`/redeem/${event.id}`}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-secondary rounded-md transition-colors flex items-center gap-2"
+                  >
+                    <span>Redeem Tiket</span>
+                  </Link>
                   <Link
                     href={`/event/${event.slug}`}
                     className="w-full text-left px-3 py-2 text-sm hover:bg-secondary rounded-md transition-colors flex items-center gap-2"
                   >
-                    👁️ <span>Lihat Halaman Publik</span>
+                    <span>Lihat Halaman Publik</span>
                   </Link>
                 </CardContent>
               </Card>

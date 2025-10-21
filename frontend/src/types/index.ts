@@ -50,11 +50,10 @@ export interface Event {
   basePrice?: number;
   termsAndConditions?: string;
   isActive: boolean;
-  status?: 'published' | 'draft' | 'cancelled';
+  status?: 'published' | 'draft' | 'cancelled' ;
   organizerId: string;
   organizer?: EventOrganizer;
   ticketCategories?: TicketCategory[];
-  ticketsCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +66,7 @@ export interface TicketCategory {
   price: number;
   maxQuantity: number;
   sold: number;
+  reserved: number;
   isActive: boolean;
   eventId?: string;
   event?: Event;
@@ -164,6 +164,9 @@ export interface AttendeeData {
   name: string;
   email: string;
   phone: string;
+  gender?: string;
+  dateOfBirth?: string;
+  address?:string;
   identityType?: string;
   identityNumber?: string;
   ticketCategoryId: string;
@@ -197,17 +200,19 @@ export interface OrderItemDetail {
   subtotal: number;
 }
 
+export interface BuyerData {
+  name: string;
+  email: string;
+  phone: string;
+}
+
 // Checkout State Types
 export interface CheckoutState {
   eventId: string;
   eventSlug: string;
   selectedTickets: { [categoryId: string]: number };
   attendees: AttendeeData[];
-  buyer: {
-    name: string;
-    email: string;
-    phone: string;
-  };
+  buyer: BuyerData;
   currentStep: 1 | 2 | 3;
 }
 

@@ -8,7 +8,7 @@ import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.e
 @Injectable()
 export class OrderCleanupService {
   private readonly logger = new Logger(OrderCleanupService.name);
-  private readonly RESERVATION_TIMEOUT_MINUTES = 15; // 15 minutes to pay
+  private readonly RESERVATION_TIMEOUT_MINUTES = 180; // 30 minutes to pay
 
   constructor(
     @InjectRepository(Order)
@@ -20,7 +20,7 @@ export class OrderCleanupService {
   /**
    * Runs every 5 minutes to clean up expired pending orders
    */
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_10_HOURS)
   async handleExpiredOrders() {
     this.logger.log('Starting expired orders cleanup...');
 

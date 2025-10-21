@@ -57,9 +57,9 @@ export class RedeemService {
    * Get all assigned wristbands (redeemed tickets)
    * Returns list of wristbands with status ASSIGNED
    */
-  async findAll(): Promise<Wristband[]> {
+  async findAllByEventId(eventId: string): Promise<Wristband[]> {
     return this.dataSource.getRepository(Wristband).find({
-      where: { status: WristbandStatus.ASSIGNED },
+      where: { status: WristbandStatus.ASSIGNED, event: { id: eventId } },
       relations: ['assignedTicket', 'event', 'category'],
       order: { assignedAt: 'DESC' },
     });

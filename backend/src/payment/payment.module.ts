@@ -3,9 +3,10 @@ import { PaymentService } from './payment.service';
 import { TicketModule } from 'src/ticket/ticket.module';
 import { PaymentController } from './payment.controller';
 import { EmailModule } from 'src/email/email.module';
+import { OrderQueueModule } from 'src/order/order-queue.module';
 
 @Module({
-  imports: [TicketModule, EmailModule],
+  imports: [TicketModule, EmailModule, OrderQueueModule],
   providers: [PaymentService],
   exports: [PaymentService],
   controllers: [PaymentController],

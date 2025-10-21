@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
 import { Event, CreateEventRequest, PaginatedResponse } from '@/types';
+import { toast } from 'sonner';
 
 // Query Keys
 export const eventKeys = {
@@ -80,8 +81,12 @@ export function useEventBySlug(slug: string, enabled = true) {
       return (response as any).data as Event;
     },
     enabled: !!slug && enabled,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 30 * 1000, // 30 seconds - more frequent updates for ticket availability
+    gcTime: 10 * 60 * 1000, // 10 minutes cache time
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds for real-time availability
+    refetchOnWindowFocus: true, // Update when user returns to tab
+    refetchOnMount: true, // Always refetch on mount
+    refetchIntervalInBackground: false, // Don't refetch when tab is not active
   });
 }
 
@@ -100,9 +105,13 @@ export function useCreateEvent() {
       return await apiService.createEvent(data);
     },
     onSuccess: () => {
+      toast.success('Event berhasil dibuat!');
       // Invalidate and refetch my events list
       queryClient.invalidateQueries({ queryKey: eventKeys.myEvents() });
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal membuat event: ${error.message || 'Terjadi kesalahan'}`);
     },
   });
 }
@@ -118,12 +127,16 @@ export function useUpdateEvent() {
       return await apiService.updateEvent(id, data);
     },
     onSuccess: (_, variables) => {
+      toast.success('Event berhasil diperbarui!');
       // Invalidate specific event detail
       queryClient.invalidateQueries({ queryKey: eventKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: [...eventKeys.details(), 'slug', variables.slug] });
       // Invalidate lists
       queryClient.invalidateQueries({ queryKey: eventKeys.myEvents() });
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal memperbarui event: ${error.message || 'Terjadi kesalahan'}`);
     },
   });
 }
@@ -139,11 +152,15 @@ export function useDeleteEvent() {
       return await apiService.deleteEvent(id);
     },
     onSuccess: (_, id) => {
+      toast.success('Event berhasil dihapus!');
       // Remove from cache
       queryClient.removeQueries({ queryKey: eventKeys.detail(id) });
-            // Invalidate lists
+      // Invalidate lists
       queryClient.invalidateQueries({ queryKey: eventKeys.myEvents() });
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal menghapus event: ${error.message || 'Terjadi kesalahan'}`);
     },
   });
 }

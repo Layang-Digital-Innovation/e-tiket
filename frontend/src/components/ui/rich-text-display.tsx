@@ -10,7 +10,7 @@ export function RichTextDisplay({ content, className }: RichTextDisplayProps) {
     <div
       className={cn(
         'prose prose-sm max-w-none',
-        'prose-headings:font-semibold prose-headings:text-gray-900',
+        'prose-headings:font-semibold prose-headings:text-gray-700',
         'prose-p:text-gray-700 prose-p:leading-relaxed',
         'prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline',
         'prose-strong:text-gray-900 prose-strong:font-semibold',

@@ -97,7 +97,7 @@ export default function CreateEventPage() {
 
       await apiService.createEvent(eventData);
       alert('Event berhasil dibuat!');
-      router.push('/eo/events');
+      router.push('/organizer/events');
     } catch (error) {
       console.error('Failed to create event:', error);
       alert('Gagal membuat event. Silakan coba lagi.');

@@ -3,6 +3,7 @@ import { PT_Sans, PT_Serif } from "next/font/google";
 import "./globals.css";
 import ReactQueryProvider from "@/lib/react-query";
 import { AuthInitializer } from "@/components/auth/AuthInitializer";
+import { Toaster } from "sonner";
 
 const ptSans = PT_Sans({
   variable: "--font-pt-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({
         <ReactQueryProvider>
           <AuthInitializer />
           {children}
+          <Toaster position="top-right" richColors />
         </ReactQueryProvider>
       </body>
     </html>

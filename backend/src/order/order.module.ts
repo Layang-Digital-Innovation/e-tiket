@@ -11,6 +11,7 @@ import { AttendeesModule } from 'src/attendees/attendees.module';
 import { PaymentModule } from 'src/payment/payment.module';
 import { OrderCleanupService } from './order-cleanup.service';
 import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
+import { OrderQueueModule } from './order-queue.module';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.e
     TicketCategoriesModule,
     EventsModule,
     AttendeesModule,
-    PaymentModule
+    PaymentModule,
+    forwardRef(() => OrderQueueModule),
   ],
   controllers: [OrderController],
   providers: [OrderService, OrderCleanupService],

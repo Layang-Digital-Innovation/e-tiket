@@ -99,6 +99,19 @@ class ApiService {
     return this.request(`/api/event/my-events${query ? `?${query}` : ''}`);
   }
 
+  // Dashboard API
+  async getDashboardStats(): Promise<ApiResponse<any>> {
+    return this.request<ApiResponse<any>>('/api/organizer-dashboard/overview');
+  }
+
+  async getSalesChart(days: number = 7): Promise<any> {
+    return this.request<any>(`/api/organizer-dashboard/sales?days=${days}`);
+  }
+
+  async getWeeklyRevenue(weeks: number = 4): Promise<any> {
+    return this.request<any>(`/api/organizer-dashboard/revenue/weekly?weeks=${weeks}`);
+  }
+
   // Tickets API
   async getTicketsCategoryByEventId(eventId: string) {
     return this.request(`/api/ticket-categories/event/${eventId}`);
@@ -209,8 +222,8 @@ class ApiService {
     });
   }
 
-  async getRedeemList(): Promise<Wristband[]> {
-    return this.request<Wristband[]>('/api/redeem');
+  async getRedeemList(eventId: string): Promise<Wristband[]> {
+    return this.request<Wristband[]>('/api/redeem/event/' + eventId);
   }
 
   async getRedeemById(id: string): Promise<Wristband> {
@@ -225,8 +238,30 @@ class ApiService {
     });
   }
 
-  async getAssignedWristbands(): Promise<Wristband[]> {
-    return this.request<Wristband[]>('/api/check-in');
+  async getAllUsers(params?: {
+    page?: number;
+    limit?: number;
+  }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    
+    const query = searchParams.toString();
+    return this.request(`/api/users${query ? `?${query}` : ''}`);
+  }
+
+  async getAllEvents(params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    if (params?.status) searchParams.append('status', params.status);
+    
+    const query = searchParams.toString();
+    return this.request(`/api/event${query ? `?${query}` : ''}`);
   }
 }
 

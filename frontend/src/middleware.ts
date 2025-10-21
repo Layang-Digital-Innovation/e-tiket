@@ -55,7 +55,7 @@ export function middleware(req: NextRequest) {
   }
 
   // Protected routes that require authentication
-  const protectedPaths = ['/dashboard', '/organizer', '/admin'];
+  const protectedPaths = ['/dashboard', '/organizer', '/admin', '/redeem', '/checkin'];
   const isProtectedPath = protectedPaths.some(path => 
     pathname === path || pathname.startsWith(path + '/')
   );
@@ -115,9 +115,9 @@ export function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // Organizer can only access /organizer routes
-    if ((userRole === 'organizer' || userRole === 'event_organizer') && pathname.startsWith('/organizer')) {
-      console.log('✅ ACCESS GRANTED - Organizer access to organizer routes');
+    // Organizer can only access /organizer, /redeem, and /checkin routes
+    if ((userRole === 'organizer' || userRole === 'event_organizer') && (pathname.startsWith('/organizer') || pathname.startsWith('/redeem') || pathname.startsWith('/checkin'))) {
+      console.log('✅ ACCESS GRANTED - Organizer access to organizer, redeem, and checkin routes');
       return NextResponse.next();
     }
 
@@ -143,6 +143,8 @@ export const config = {
     '/dashboard/:path*',
     '/organizer/:path*',
     '/admin/:path*',
+    '/redeem/:path*',
+    '/checkin/:path*',
     '/login',
     '/register',
     '/', // Home page untuk redirect berdasarkan role

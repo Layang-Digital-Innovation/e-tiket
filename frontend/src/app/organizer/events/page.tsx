@@ -6,6 +6,7 @@ import { useMyEvents, useDeleteEvent } from '@/hooks';
 import { EventCard } from '@/components/events/EventCard';
 import { Plus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export default function EOEventsPage() {
   const [page, setPage] = useState(1);
@@ -26,9 +27,9 @@ export default function EOEventsPage() {
     try {
       setDeletingId(id);
       await deleteEventMutation.mutateAsync(id);
-      alert('Event berhasil dihapus');
+      toast.success('Event berhasil dihapus');
     } catch (error) {
-      alert('Gagal menghapus event');
+      toast.error('Gagal menghapus event');
       console.error('Delete error:', error);
     } finally {
       setDeletingId(null);
@@ -107,7 +108,7 @@ export default function EOEventsPage() {
                     Mulai dengan membuat event pertama Anda
                   </p>
                   <Link
-                    href="/eo/events/create"
+                    href="/organizer/events/create"
                     className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
                   >
                     Buat Event Baru

@@ -5,6 +5,7 @@ import { useCheckIn, useAssignedWristbands } from '@/hooks/useCheckIn';
 import { Watch, CheckCircle, AlertCircle, Loader2, QrCode, Ticket, Clock, Scan } from 'lucide-react';
 import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
+import { Badge } from '@/components/ui/badge';
 
 // Dynamic import QR Scanner to avoid SSR issues
 const QrScanner = dynamic(() => import('@/components/QrScanner'), {
@@ -19,7 +20,7 @@ export default function CheckInPage() {
   const [scannerOpen, setScannerOpen] = useState(false);
 
   const checkInMutation = useCheckIn();
-  const { data: assignedWristbands, isLoading: isLoadingList } = useAssignedWristbands();
+  const { data: assignedWristbands = [], isLoading: isLoadingList } = useAssignedWristbands();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,8 +56,8 @@ export default function CheckInPage() {
   };
 
   // Filter wristbands by status
-  const readyToCheckIn = assignedWristbands?.filter((w) => w.status === 'assigned') || [];
-  const checkedIn = assignedWristbands?.filter((w) => w.status === 'checked_in') || [];
+  const readyToCheckIn = Array.isArray(assignedWristbands) ? assignedWristbands.filter((w) => w.status === 'assigned') : [];
+  const checkedIn = Array.isArray(assignedWristbands) ? assignedWristbands.filter((w) => w.status === 'checked_in') : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
@@ -166,7 +167,7 @@ export default function CheckInPage() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-green-600" />
               </div>
-            ) : !assignedWristbands || assignedWristbands.length === 0 ? (
+            ) : assignedWristbands.length === 0 ? (
               <div className="text-center py-12">
                 <Watch className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500">Belum ada wristband yang assigned</p>
@@ -196,9 +197,9 @@ export default function CheckInPage() {
                                 <p className="text-xs text-gray-500">Wristband Code</p>
                               </div>
                             </div>
-                            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
                               {wristband.status}
-                            </span>
+                            </Badge>
                           </div>
 
                           {wristband.assignedTicket && (
@@ -236,9 +237,9 @@ export default function CheckInPage() {
                                 <p className="text-xs text-gray-500">Wristband Code</p>
                               </div>
                             </div>
-                            <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                            <Badge variant="success" className="bg-green-100 text-green-800 border-green-200">
                               {wristband.status}
-                            </span>
+                            </Badge>
                           </div>
 
                           {wristband.assignedTicket && (

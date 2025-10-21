@@ -11,8 +11,12 @@ import { Order, OrderStatus } from 'src/order/entities/order.entity';
 import { CreateOrderItemDto } from 'src/order_item/dto/create-order_item.dto';
 import { Ticket } from 'src/ticket/entities/ticket.entity';
 import { TicketService } from 'src/ticket/ticket.service';
+import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
 import { DataSource } from 'typeorm';
 import { EmailQueueService } from 'src/email/email-queue.service';
+import type { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bull';
+import type { ExpireOrderJobData } from 'src/order/order-expiration.processor';
 
 interface CreateInvoiceParams {
   external_id: string;
@@ -75,6 +79,8 @@ export class PaymentService {
     private readonly ticketService: TicketService,
     private readonly emailQueueService: EmailQueueService,
     private readonly dataSource: DataSource,
+    @InjectQueue('order-expiration')
+    private readonly orderExpirationQueue: Queue<ExpireOrderJobData>,
   ) {
     this.xenditPublicKey =
       this.configService.get<string>('XENDIT_PUBLIC_KEY') ?? '';
@@ -174,24 +180,36 @@ async handlePaymentSuccess(callbackData: CallbackSuccessDto) {
       throw new BadRequestException(`Invalid payment status: ${callbackData.status}`);
     }
 
-    // 1️⃣ Cari order lengkap
+    // 1️⃣ Cari dan lock order terlebih dahulu
     const order = await queryRunner.manager.findOne(Order, {
       where: { transactionCode: callbackData.external_id },
-      relations: [
-        'orderItems',
-        'orderItems.ticketCategory',
-        'orderItems.ticketCategory.event',
-        'orderItems.attendees', 
-      ],
+      lock: { mode: 'pessimistic_write' },
     });
+
+    if (!order) throw new NotFoundException('Order not found');
 
     this.logger.log(`Processing payment for order: ${callbackData.external_id}`);
 
-    if (!order) throw new NotFoundException('Order not found');
     if (order.status === OrderStatus.PAID) {
       this.logger.warn(`Order ${callbackData.external_id} already paid`);
       throw new BadRequestException('Order already paid');
     }
+
+    // Load relations setelah order di-lock
+    const orderWithRelations = await queryRunner.manager.findOne(Order, {
+      where: { id: order.id },
+      relations: [
+        'orderItems',
+        'orderItems.ticketCategory',
+        'orderItems.ticketCategory.event',
+        'orderItems.attendees',
+      ],
+    });
+
+    if (!orderWithRelations) throw new NotFoundException('Order not found');
+
+    // Gunakan object dengan relations untuk processing
+    Object.assign(order, orderWithRelations);
 
     // 2️⃣ Update status order
     order.status = OrderStatus.PAID;
@@ -201,16 +219,43 @@ async handlePaymentSuccess(callbackData: CallbackSuccessDto) {
     order.paidAt = callbackData.paid_at ? new Date(callbackData.paid_at) : new Date();
     await queryRunner.manager.save(order);
 
+    // Cancel the expiration job since order is now paid
+    try {
+      const jobs = await this.orderExpirationQueue.getJobs(['delayed', 'waiting', 'active']);
+      const expirationJob = jobs.find(job => job.data.orderId === order.id);
+      if (expirationJob) {
+        await expirationJob.remove();
+        this.logger.log(`Cancelled expiration job for paid order ${order.id}`);
+      }
+    } catch (jobError) {
+      this.logger.warn(`Failed to cancel expiration job for order ${order.id}:`, jobError);
+      // Don't fail payment processing if job cancellation fails
+    }
+
     // 3️⃣ Update stok tiket & collect tickets to generate
     const allTicketsToSave: Ticket[] = [];
     for (const item of order.orderItems) {
-      const category = item.ticketCategory;
+      const category = await queryRunner.manager.findOne(TicketCategory, {
+        where: { id: item.ticketCategory.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!category) {
+        throw new NotFoundException(`Ticket category ${item.ticketCategory.id} not found`);
+      }
 
       // Move from reserved to sold
       category.reserved -= item.quantity;
+      
+      const remaining = category.maxQuantity - category.sold;
+      if (item.quantity > remaining) {
+        throw new BadRequestException(
+          `Not enough tickets available. Remaining: ${remaining}, requested: ${item.quantity}`,
+        );
+      }
       category.sold += item.quantity;
       
-      // Prevent negative reserved
+      // Prevent negative reserved (safety check)
       if (category.reserved < 0) category.reserved = 0;
       
       await queryRunner.manager.save(category);
@@ -309,8 +354,4 @@ async handlePaymentSuccess(callbackData: CallbackSuccessDto) {
     await queryRunner.release();
   }
 }
-
-
-
- 
 }

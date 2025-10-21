@@ -17,10 +17,10 @@ export class RedeemController {
     return this.redeemService.redeemTicketToWristband(createRedeemDto.ticketCode, createRedeemDto.wristbandCode);
   }
 
-  @Get()
+  @Get('event/:eventId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  findAll() {
-    return this.redeemService.findAll();
+  findAll(@Param('eventId') eventId: string) {
+    return this.redeemService.findAllByEventId(eventId);
   }
 
   @Get(':id')

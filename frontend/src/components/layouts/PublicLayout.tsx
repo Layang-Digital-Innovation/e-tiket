@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import Header from '@/components/header';
+import { Toaster } from 'sonner';
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -12,6 +13,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
       <main className="pt-16">
         {children}
       </main>
+      <Toaster position="top-right" richColors />
     </div>
   );
 }

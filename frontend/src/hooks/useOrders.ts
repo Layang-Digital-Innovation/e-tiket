@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
 import { ApiResponse, CreateOrderRequest, CreateOrderResponse, Order } from '@/types';
+import { eventKeys } from './useEvents';
+import { toast } from 'sonner';
 
 // Query Keys
 export const orderKeys = {
@@ -62,7 +64,7 @@ export function useOrderByNumber(orderNumber: string, enabled = true) {
 /**
  * Create new order
  */
-export function useCreateOrder() {
+export function useCreateOrder(eventSlug?: string) {
   const queryClient = useQueryClient();
 
   return useMutation<ApiResponse<CreateOrderResponse>, Error, CreateOrderRequest>({
@@ -70,8 +72,19 @@ export function useCreateOrder() {
       return await apiService.createOrder(data);
     },
     onSuccess: () => {
+      toast.success('Pesanan berhasil dibuat!');
       // Invalidate orders list
       queryClient.invalidateQueries({ queryKey: orderKeys.lists() });
+      
+      // Invalidate specific event detail if slug provided (for real-time availability updates)
+      if (eventSlug) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['events', 'detail', 'slug', eventSlug] 
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal membuat pesanan: ${error.message || 'Terjadi kesalahan'}`);
     },
   });
 }

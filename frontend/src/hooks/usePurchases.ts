@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
 import { TicketPurchase, PurchaseTicketRequest, PaginatedResponse } from '@/types';
+import { toast } from 'sonner';
 
 // Query Keys
 export const purchaseKeys = {
@@ -44,6 +45,7 @@ export function useCreatePurchase() {
       return await apiService.createPurchase(data);
     },
     onSuccess: () => {
+      toast.success('Pembelian tiket berhasil!');
       // Invalidate purchases list
       queryClient.invalidateQueries({ queryKey: purchaseKeys.lists() });
       
@@ -52,6 +54,9 @@ export function useCreatePurchase() {
       
       // Invalidate events to update capacity
       queryClient.invalidateQueries({ queryKey: ['events'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal membeli tiket: ${error.message || 'Terjadi kesalahan'}`);
     },
   });
 }
