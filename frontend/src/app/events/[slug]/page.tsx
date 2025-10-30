@@ -10,24 +10,26 @@ import PublicLayout from '@/components/layouts/PublicLayout';
 import { Calendar, MapPin, Users, Clock, Ticket, ChevronRight, Minus, Plus, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/lib/utils';
-import { TicketCategory } from '@/types';
+import { TicketCategory, CheckoutState } from '@/types';
 import { useCheckoutStore } from '@/store/checkout.store';
+import Image from 'next/image';
 
 export default function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const router = useRouter();
-  const { data: event, isLoading, error, dataUpdatedAt } = useEventBySlug(slug);
-  const { setCheckoutSession } = useCheckoutStore();
+  const { data: event, isLoading, error } = useEventBySlug(slug);
+  const { setCheckoutSession, checkoutSession, reset, currentStep, timeLeft, paymentUrl, timerActive, startTimer, clearCheckoutSession } = useCheckoutStore();
   
   const [selectedTickets, setSelectedTickets] = useState<{ [categoryId: string]: number }>({});
-  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
 
-  // Track when data was last updated
   useEffect(() => {
-    if (dataUpdatedAt) {
-      setLastUpdateTime(new Date(dataUpdatedAt));
+    // Handle restored state after app restart - check for expired timer
+    if (checkoutSession && currentStep === 3 && checkoutSession.eventSlug === slug && timeLeft === 0) {
+      console.log('Payment time expired during app restart, clearing session from event page');
+      clearCheckoutSession();
+      router.push(`/events/${slug}`);
     }
-  }, [dataUpdatedAt]);
+  }, [checkoutSession, currentStep, timeLeft, slug, clearCheckoutSession, router]);
 
   const handleQuantityChange = (categoryId: string, change: number) => {
     const category = event?.ticketCategories?.find((t: TicketCategory) => t.id === categoryId);
@@ -60,20 +62,39 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
     return Object.values(selectedTickets).reduce((total, qty) => total + qty, 0);
   };
 
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const handleCheckout = () => {
     if (getTotalTickets() === 0 || !event) return;
-    
+
+    console.log('checkoutSession', checkoutSession);
+    console.log('currentStep', currentStep);
+
+    // Prevent checkout if there's already an active checkout session and user is in payment step
+    if (checkoutSession && currentStep === 3) {
+      console.log('Checkout blocked: User is in payment step');
+      return;
+    }
+
+    // Reset checkout store to clean state before creating new session
+    reset();
+
     // Create checkout session using Zustand store
-    const checkoutSession = {
+    const newCheckoutSession: CheckoutState = {
       eventId: event.id,
       eventSlug: slug,
       selectedTickets,
       attendees: [], // Will be populated in checkout page
       buyer: { name: '', email: '', phone: '' }, // Will be filled in checkout page
-      currentStep: 1 as const,
+      currentStep: 1,
     };
-    
-    setCheckoutSession(checkoutSession);
+
+    setCheckoutSession(newCheckoutSession);
     router.push(`/checkout/${slug}`);
   };
 
@@ -113,7 +134,15 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
     <PublicLayout>
       <div className="min-h-screen bg-gray-50">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+        <div
+          className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white"
+          style={event.imageUrl ? {
+            backgroundImage: `linear-gradient(to right, rgba(37,99,235,0.85), rgba(79,70,229,0.85)), url(${event.imageUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+          } : undefined}
+        >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div>
@@ -143,10 +172,16 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                 </div>
               </div>
               <div className="hidden lg:block">
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-8 text-center">
-                  <Ticket className="h-24 w-24 mx-auto mb-4 text-white/80" />
-                  <p className="text-lg">Tiket Mulai Dari</p>
-                  <p className="text-4xl font-bold mt-2">{formatCurrency(event.basePrice || 0)}</p>
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg relative overflow-hidden aspect-[16/9]">
+                  {event?.imageUrl ? (
+                    <Image
+                      src={event.imageUrl}
+                      alt={event.title}
+                      fill
+                      className="object-cover"
+                      sizes="(min-width: 1024px) 500px, 100vw"
+                    />
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -318,8 +353,35 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                   Ringkasan Pesanan
                 </h3>
                 <Separator className="my-4"/>
+
+                {checkoutSession && currentStep === 3 && checkoutSession.eventSlug === slug && (
+                  <div className="border-t border-gray-200 pt-4 mt-4">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                      <p className="text-sm text-yellow-800 text-center mb-3">
+                        <strong>Anda sedang dalam proses pembayaran</strong>
+                      </p>
+                      <p className="text-xs text-yellow-700 text-center mb-4">
+                        Waktu tersisa: {formatTime(timeLeft)} - Klik tombol di bawah untuk melanjutkan
+                      </p>
+                      <Button
+                        onClick={() => {
+                          if (paymentUrl) {
+                            // Start timer if not already active when continuing payment
+                            if (!timerActive && timeLeft > 0) {
+                              startTimer(timeLeft);
+                            }
+                            router.push(`/checkout/${slug}`);
+                          }
+                        }}
+                        className="w-full bg-green-600 text-white hover:bg-green-700 font-semibold py-2 px-4 rounded-lg"
+                      >
+                        Lanjutkan ke Checkout
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 
-                {getTotalTickets() === 0 ? (
+                {getTotalTickets() === 0  ? (
                   <p className="text-gray-600 text-center py-8">
                     Belum ada tiket dipilih
                   </p>
@@ -355,13 +417,18 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                       </p>
                     </div>
 
-                    <Button
-                      onClick={handleCheckout}
-                      className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center"
-                    >
-                      Lanjut ke Checkout
-                      <ChevronRight className="h-5 w-5 ml-2" />
-                    </Button>
+
+
+                    {/* Regular checkout button - only show when not in payment step */}
+                    {(!checkoutSession || currentStep !== 3 || checkoutSession.eventSlug !== slug) && (
+                      <Button
+                        onClick={handleCheckout}
+                        className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center"
+                      >
+                        Lanjut ke Checkout
+                        <ChevronRight className="h-5 w-5 ml-2" />
+                      </Button>
+                    )}
                   </>
                 )}
               </div>

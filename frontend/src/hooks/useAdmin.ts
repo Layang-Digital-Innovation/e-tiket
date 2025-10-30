@@ -9,6 +9,24 @@ export interface AdminStats {
   totalTicketsSold: number;
   totalRevenue: number;
   activeEvents: number;
+  growth: {
+    users: {
+      percentage: number;
+      period: string;
+    };
+    eventOrganizers: {
+      count: number;
+      period: string;
+    };
+    ticketsSold: {
+      percentage: number;
+      period: string;
+    };
+    revenue: {
+      percentage: number;
+      period: string;
+    };
+  };
 }
 
 export interface RecentActivity {
@@ -24,16 +42,8 @@ export function useAdminStats() {
   return useQuery<AdminStats, Error>({
     queryKey: ['adminStats'],
     queryFn: async () => {
-      // For now, we'll simulate the data since the backend endpoints might not exist yet
-      // In a real implementation, this would call an admin stats API endpoint
-      return {
-        totalUsers: 245,
-        totalEventOrganizers: 12,
-        totalEvents: 45,
-        totalTicketsSold: 1234,
-        totalRevenue: 45678000,
-        activeEvents: 8,
-      };
+      const response = await apiService.getAdminStats() as { data: AdminStats };
+      return response.data;
     },
   });
 }
@@ -90,13 +100,14 @@ export function useAllUsers(params?: {
   page?: number;
   limit?: number;
   role?: string;
+  status?: string;
+  search?: string;
 }) {
   return useQuery({
     queryKey: ['allUsers', params],
     queryFn: async () => {
       return apiService.getAllUsers(params);
     },
-    enabled: !!params, // Only run if params are provided
   });
 }
 
@@ -105,6 +116,7 @@ export function useAllEvents(params?: {
   page?: number;
   limit?: number;
   status?: string;
+  search?: string;
 }) {
   return useQuery({
     queryKey: ['allEvents', params],

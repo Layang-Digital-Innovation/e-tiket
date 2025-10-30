@@ -1,12 +1,13 @@
 'use client';
 
-import Link from 'next/link';
 import { useAdminDashboard } from '@/hooks/useAdmin';
-import { Loader2, Users, Building2, Calendar, Ticket, DollarSign, TrendingUp, UserPlus, FileText, Settings, Shield } from 'lucide-react';
+import { Loader2, Users, Building2, Calendar, Ticket, DollarSign, TrendingUp, UserPlus, FileText, QrCode, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const { stats, recentActivities, isLoading } = useAdminDashboard();
 
   const formatCurrency = (amount: number) => {
@@ -68,6 +69,47 @@ export default function AdminDashboard() {
                 </p>
               </div>
 
+              {/* Operational Actions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {/* Check-in Card */}
+                <button
+                  onClick={() => router.push('/checkin')}
+                  className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-lg p-6 hover:shadow-lg transition-all hover:scale-105 text-left group"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                          <QrCode className="w-6 h-6 text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">Check-in Peserta</h3>
+                      </div>
+                      <p className="text-sm text-gray-600">Scan QR code untuk check-in wristband peserta</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-green-600 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+
+                {/* Redeem Card */}
+                <button
+                  onClick={() => router.push('/redeem')}
+                  className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-lg p-6 hover:shadow-lg transition-all hover:scale-105 text-left group"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                          <Ticket className="w-6 h-6 text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">Redeem Tiket</h3>
+                      </div>
+                      <p className="text-sm text-gray-600">Tukarkan tiket dengan wristband peserta</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+              </div>
+
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 {/* Total Users */}
@@ -87,8 +129,11 @@ export default function AdminDashboard() {
                           <dd className="text-2xl font-bold text-gray-900">
                             {stats?.totalUsers || 0}
                           </dd>
-                          <dd className="text-xs text-green-600 mt-1">
-                            +12% dari bulan lalu
+                          <dd className={`text-xs mt-1 ${stats?.growth?.users.percentage !== undefined && stats.growth.users.percentage < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {stats?.growth?.users.percentage !== undefined
+                              ? `${stats.growth.users.percentage >= 0 ? '+' : ''}${stats.growth.users.percentage}% ${stats.growth.users.period}`
+                              : '+0% bulan lalu'
+                            }
                           </dd>
                         </dl>
                       </div>
@@ -114,7 +159,10 @@ export default function AdminDashboard() {
                             {stats?.totalEventOrganizers || 0}
                           </dd>
                           <dd className="text-xs text-green-600 mt-1">
-                            +3 baru minggu ini
+                            {stats?.growth?.eventOrganizers.count !== undefined
+                              ? `+${stats.growth.eventOrganizers.count} ${stats.growth.eventOrganizers.period}`
+                              : '+0 minggu ini'
+                            }
                           </dd>
                         </dl>
                       </div>
@@ -165,8 +213,11 @@ export default function AdminDashboard() {
                           <dd className="text-2xl font-bold text-gray-900">
                             {stats?.totalTicketsSold?.toLocaleString('id-ID') || 0}
                           </dd>
-                          <dd className="text-xs text-green-600 mt-1">
-                            +8% dari bulan lalu
+                          <dd className={`text-xs mt-1 ${stats?.growth?.ticketsSold.percentage !== undefined && stats.growth.ticketsSold.percentage < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {stats?.growth?.ticketsSold.percentage !== undefined
+                              ? `${stats.growth.ticketsSold.percentage >= 0 ? '+' : ''}${stats.growth.ticketsSold.percentage}% ${stats.growth.ticketsSold.period}`
+                              : '+0% bulan lalu'
+                            }
                           </dd>
                         </dl>
                       </div>
@@ -191,34 +242,11 @@ export default function AdminDashboard() {
                           <dd className="text-2xl font-bold text-gray-900">
                             {stats?.totalRevenue ? formatCurrency(stats.totalRevenue) : 'Rp 0'}
                           </dd>
-                          <dd className="text-xs text-green-600 mt-1">
-                            +15% dari bulan lalu
-                          </dd>
-                        </dl>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Active Events */}
-                <div className="bg-white overflow-hidden shadow rounded-lg">
-                  <div className="p-5">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center">
-                          <TrendingUp className="w-6 h-6 text-white" />
-                        </div>
-                      </div>
-                      <div className="ml-5 w-0 flex-1">
-                        <dl>
-                          <dt className="text-sm font-medium text-gray-500 truncate">
-                            Events Aktif
-                          </dt>
-                          <dd className="text-2xl font-bold text-gray-900">
-                            {stats?.activeEvents || 0}
-                          </dd>
-                          <dd className="text-xs text-gray-600 mt-1">
-                            Sedang berlangsung
+                          <dd className={`text-xs mt-1 ${stats?.growth?.revenue.percentage !== undefined && stats.growth.revenue.percentage < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {stats?.growth?.revenue.percentage !== undefined
+                              ? `${stats.growth.revenue.percentage >= 0 ? '+' : ''}${stats.growth.revenue.percentage}% ${stats.growth.revenue.period}`
+                              : '+0% bulan lalu'
+                            }
                           </dd>
                         </dl>
                       </div>
@@ -227,101 +255,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Recent Activity */}
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                      Aktivitas Terbaru
-                    </h3>
-                    <div className="space-y-4">
-                      {recentActivities.map((activity) => (
-                        <div
-                          key={activity.id}
-                          className={`flex items-start gap-3 p-3 rounded-lg border ${getActivityColor(activity.type)}`}
-                        >
-                          <div className="flex-shrink-0 mt-0.5">
-                            {getActivityIcon(activity.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-900 leading-relaxed">
-                              {activity.message}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {format(new Date(activity.timestamp), 'dd MMM yyyy HH:mm', { locale: undefined })}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                      Aksi Cepat
-                    </h3>
-                    <div className="grid grid-cols-1 gap-3">
-                      <Link
-                        href="/admin/organizers"
-                        className="flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <Building2 className="w-5 h-5 text-purple-600" />
-                        <div>
-                          <p className="font-medium text-gray-900">Kelola Event Organizers</p>
-                          <p className="text-sm text-gray-600">Lihat dan kelola semua EO</p>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/admin/events"
-                        className="flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <Calendar className="w-5 h-5 text-green-600" />
-                        <div>
-                          <p className="font-medium text-gray-900">Kelola Events</p>
-                          <p className="text-sm text-gray-600">Pantau semua event di platform</p>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/admin/users"
-                        className="flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <Users className="w-5 h-5 text-blue-600" />
-                        <div>
-                          <p className="font-medium text-gray-900">Kelola Users</p>
-                          <p className="text-sm text-gray-600">Lihat dan kelola semua user</p>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/admin/reports"
-                        className="flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <FileText className="w-5 h-5 text-orange-600" />
-                        <div>
-                          <p className="font-medium text-gray-900">Laporan & Analytics</p>
-                          <p className="text-sm text-gray-600">Lihat laporan detail sistem</p>
-                        </div>
-                      </Link>
-
-                      <Link
-                        href="/admin/settings"
-                        className="flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <Settings className="w-5 h-5 text-gray-600" />
-                        <div>
-                          <p className="font-medium text-gray-900">Pengaturan Sistem</p>
-                          <p className="text-sm text-gray-600">Konfigurasi platform</p>
-                        </div>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </>
           )}
         </div>

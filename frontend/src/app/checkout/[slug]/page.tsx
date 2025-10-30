@@ -29,11 +29,15 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
     updateBuyer,
     clearCheckoutSession,
     reset,
+    timeLeft,
+    timerActive,
+    startTimer,
+    decrementTimer,
+    stopTimer,
   } = useCheckoutStore();
   
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [timeLeft, setTimeLeft] = useState<number>(60 * 60); // 60 minutes in seconds
 
   // Derived data from store
   const buyer = checkoutSession?.buyer || { name: '', email: '', phone: '' };
@@ -67,21 +71,42 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
         updateAttendees(initialAttendees);
       }
     }
-  }, [checkoutSession, slug, clearCheckoutSession, router, attendees.length, event?.ticketCategories, updateAttendees, currentStep]);
 
-  // Countdown timer for step 3
-  useEffect(() => {
-    if (currentStep === 3 && timeLeft > 0) {
-      const timer = setTimeout(() => {
-        setTimeLeft(timeLeft - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (currentStep === 3 && timeLeft === 0) {
-      // Time expired, perhaps redirect or show message
-     toast.error('Waktu pembayaran telah habis. Silakan buat pesanan baru.');
-      // router.push(`/events/${slug}`);
+    // Handle restored state after app restart
+    if (checkoutSession && currentStep === 3 && paymentUrl && !timerActive) {
+      // If we're in payment step with restored state, check if time is still valid
+      if (timeLeft > 300) {
+        // More than 5 minutes left, allow manual continuation
+        console.log('Payment timer restored after app restart - time remaining:', timeLeft);
+      } else if (timeLeft > 0) {
+        // Less than 5 minutes but still time left, auto-start timer for urgency
+        console.log('Payment time running low, auto-starting timer');
+        startTimer(timeLeft);
+      } else {
+        // Time completely expired during restart, clear session
+        console.log('Payment time expired during app restart, clearing session');
+        clearCheckoutSession();
+        router.push(`/events/${slug}`);
+      }
     }
-  }, [currentStep, timeLeft]);
+  }, [checkoutSession, slug, clearCheckoutSession, router, attendees.length, event?.ticketCategories, updateAttendees, currentStep, paymentUrl, timerActive, timeLeft]);
+
+  // Countdown timer for step 3 (moved to global store level)
+
+  // Handle timer expiration
+  useEffect(() => {
+    if (currentStep === 3 && timeLeft === 0 && timerActive) {
+      // Time expired, stop timer and show message
+      stopTimer();
+      toast.error('Waktu pembayaran telah habis. Silakan buat pesanan baru.');
+
+      const redirectTimer = setTimeout(() => {
+        clearCheckoutSession();
+        router.push(`/events/${slug}`);
+      }, 3000);
+      return () => clearTimeout(redirectTimer);
+    }
+  }, [currentStep, timeLeft, timerActive, stopTimer, clearCheckoutSession, router, slug]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -214,6 +239,9 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
       // Set payment URL and proceed to step 3
       setPaymentUrl(response.data.paymentUrl);
       setStep(3);
+      
+      // Start payment timer (60 minutes = 3600 seconds)
+      startTimer(60 * 60);
       
       // Redirect to order success page or events list
       // router.push('/events');
@@ -633,7 +661,6 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                           onClick={() => {
                             if (paymentUrl) {
                               window.location.href = paymentUrl;
-                              clearCheckoutSession();
                             }
                           }}
                           disabled={!paymentUrl}
@@ -650,7 +677,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                 <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
                   <button
                     onClick={handleBack}
-                    disabled={currentStep === 1}
+                    disabled={currentStep === 1 || isSubmitting || currentStep === 3}
                     className="flex items-center px-6 py-2 text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="h-5 w-5 mr-2" />
@@ -660,7 +687,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                   {currentStep < 3 ? (
                     <Button
                       onClick={handleNext}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || currentStep === 3}
                       className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
                     >
                       {currentStep === 1 ? 'Lanjutkan ke Konfirmasi' : 'Buat Pesanan'}

@@ -169,16 +169,46 @@ export class OrganizerDashboardService {
   }
 
   async getSalesChart(organizerId: string, days: number = 7) {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - days + 1);
+    // Create date range: last N days including today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const endDate = new Date(today);
+    endDate.setHours(23, 59, 59, 999);
+    
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - (days - 1)); // -6 for 7 days total
+    startDate.setHours(0, 0, 0, 0);
+
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
 
     console.log(`📊 Getting sales chart for organizer ${organizerId}, days: ${days}`);
-    console.log(`📅 Date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+    console.log(`📅 Date range: ${startDateStr} to ${endDateStr}`);
+
+    // Debug: Check if organizer has any PAID orders at all
+    const allPaidOrders = await this.orderRepository
+      .createQueryBuilder('order')
+      .select('order.id')
+      .addSelect('order.status')
+      .addSelect('order.paidAt')
+      .addSelect('order.totalAmount')
+      .addSelect("CAST(order.paidAt AS DATE)", 'paidDate')
+      .leftJoin('order.orderItems', 'orderItem')
+      .leftJoin('orderItem.ticketCategory', 'ticketCategory')
+      .leftJoin('ticketCategory.event', 'event')
+      .leftJoin('event.organizer', 'organizer')
+      .where('organizer.id = :organizerId', { organizerId })
+      .andWhere('order.status = :status', { status: OrderStatus.PAID })
+      .getRawMany();
+
+    console.log(`🔍 Total PAID orders for organizer: ${allPaidOrders.length}`);
+    console.log(`🔍 Sample PAID orders:`, allPaidOrders.slice(0, 5));
+    console.log(`📅 Date range filter: ${startDateStr} to ${endDateStr}`);
 
     const result = await this.orderRepository
       .createQueryBuilder('order')
-      .select('DATE(order.paidAt)', 'date')
+      .select("TO_CHAR(CAST((order.paidAt AT TIME ZONE 'Asia/Jakarta') AS DATE), 'YYYY-MM-DD')", 'date')
       .addSelect('COUNT(DISTINCT order.id)', 'sales')
       .addSelect('SUM(order.totalAmount)', 'revenue')
       .leftJoin('order.orderItems', 'orderItem')
@@ -187,32 +217,50 @@ export class OrganizerDashboardService {
       .leftJoin('event.organizer', 'organizer')
       .where('organizer.id = :organizerId', { organizerId })
       .andWhere('order.status = :status', { status: OrderStatus.PAID })
-      .andWhere('DATE(order.paidAt) >= :startDate', { startDate: startDate.toISOString().split('T')[0] })
-      .andWhere('DATE(order.paidAt) <= :endDate', { endDate: endDate.toISOString().split('T')[0] })
-      .groupBy('DATE(order.paidAt)')
-      .orderBy('DATE(order.paidAt)', 'ASC')
+      .andWhere('order.paidAt IS NOT NULL')
+      .andWhere("CAST((order.paidAt AT TIME ZONE 'Asia/Jakarta') AS DATE) >= :startDate", { startDate: startDateStr })
+      .andWhere("CAST((order.paidAt AT TIME ZONE 'Asia/Jakarta') AS DATE) <= :endDate", { endDate: endDateStr })
+      .groupBy("CAST((order.paidAt AT TIME ZONE 'Asia/Jakarta') AS DATE)")
+      .orderBy("CAST((order.paidAt AT TIME ZONE 'Asia/Jakarta') AS DATE)", 'ASC')
       .getRawMany();
 
-    console.log(`📈 Raw query result:`, result);
+    console.log(`📈 Raw query result for date range:`, result);
+    if (result.length > 0) {
+      console.log(`📅 First result date type:`, typeof result[0].date, `value:`, result[0].date);
+    }
 
     // Initialize all days with 0
     const salesData: Array<{ date: string; sales: number; revenue: number }> = [];
     for (let i = 0; i < days; i++) {
       const date = new Date(startDate);
       date.setDate(startDate.getDate() + i);
+      // Format date as YYYY-MM-DD using local date (not UTC)
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
       salesData.push({
-        date: date.toISOString().split('T')[0],
+        date: dateStr,
         sales: 0,
         revenue: 0,
       });
     }
 
+    console.log(`📋 Sales data initialized:`, salesData.map(d => d.date));
+
     // Fill in actual sales data
     result.forEach((item) => {
-      const dateIndex = salesData.findIndex(d => d.date === item.date);
+      console.log(`🔍 Trying to match date: "${item.date}" (type: ${typeof item.date})`);
+      const dateIndex = salesData.findIndex(d => {
+        const match = d.date === item.date;
+        console.log(`  Comparing "${d.date}" === "${item.date}" → ${match}`);
+        return match;
+      });
+      console.log(`  Match result: ${dateIndex !== -1 ? 'FOUND at index ' + dateIndex : 'NOT FOUND'}`);
       if (dateIndex !== -1) {
         salesData[dateIndex].sales = parseInt(item.sales, 10);
-        salesData[dateIndex].revenue = parseFloat(item.revenue);
+        salesData[dateIndex].revenue = parseFloat(item.revenue || 0);
       }
     });
 

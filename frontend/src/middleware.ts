@@ -28,7 +28,7 @@ function decodeAndValidateToken(token: string): { role: string | null; isValid: 
 
 // Role-based default routes
 const roleDefaultRoutes: Record<string, string> = {
-  'admin': '/admin',
+  'admin': '/admin/dashboard',
   'event_organizer': '/organizer/events',
   'user': '/dashboard',
 };

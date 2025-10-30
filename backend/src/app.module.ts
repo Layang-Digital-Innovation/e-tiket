@@ -22,6 +22,8 @@ import { RedeemModule } from './redeem/redeem.module';
 import { CheckInModule } from './check_in/check_in.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { OrganizerDashboardModule } from './organizer-dashboard/organizer-dashboard.module';
+import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
+import { PayoutModule } from './payout/payout.module';
 
 @Module({
   imports: [
@@ -68,6 +70,8 @@ import { OrganizerDashboardModule } from './organizer-dashboard/organizer-dashbo
     RedeemModule,
     CheckInModule,
     OrganizerDashboardModule,
+    AdminDashboardModule,
+    PayoutModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -70,10 +70,6 @@ export default function RegisterPage() {
       newErrors.email = 'Format email tidak valid';
     }
 
-    // Phone validation (optional but if provided, must be valid)
-    if (formData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Format nomor telepon tidak valid';
-    }
 
     // Password validation
     if (!formData.password) {

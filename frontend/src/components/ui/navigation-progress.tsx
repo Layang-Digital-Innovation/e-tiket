@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useNavigationStore } from '@/store/navigation/useNavigationStore';
 
-export default function NavigationProgress() {
+export default function NavigationProgress({className}: {className?: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
@@ -103,7 +103,7 @@ export default function NavigationProgress() {
       style={{ marginLeft: 'var(--sidebar-width, 0px)' }}
     >
       <div
-        className="h-full bg-primary transition-all duration-300 ease-out shadow-lg"
+        className={`h-full bg-primary ${className} transition-all duration-300 ease-out shadow-lg`}
         style={{
           width: `${progress}%`,
           boxShadow: '0 0 10px rgba(59, 130, 246, 0.5)',

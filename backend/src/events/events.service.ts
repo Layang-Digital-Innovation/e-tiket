@@ -223,4 +223,14 @@ export class EventsService {
     // Update basePrice event
     await this.eventsRepository.update(eventId, { basePrice: minPrice });
   }
+
+  getTotalEvents(): Promise<number> {
+    return this.eventsRepository.count();
+  }
+
+  getTotalActiveEvents(): Promise<number> {
+    return this.eventsRepository.count({
+      where: { status: EventStatus.PUBLISHED }
+    });
+  }
 }

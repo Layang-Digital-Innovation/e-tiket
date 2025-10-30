@@ -74,6 +74,7 @@ export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
   private readonly xenditPublicKey: string;
   private readonly xenditSecretKey: string;
+  private frontendUrl: string;
   constructor(
     private configService: ConfigService,
     private readonly ticketService: TicketService,
@@ -86,6 +87,8 @@ export class PaymentService {
       this.configService.get<string>('XENDIT_PUBLIC_KEY') ?? '';
     this.xenditSecretKey =
       this.configService.get<string>('XENDIT_SECRET_KEY') ?? '';
+    this.frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
   }
 
   async createInvoice(params: CreateInvoiceParams) {
@@ -125,8 +128,8 @@ export class PaymentService {
         channel_properties: {},
         mode: 'PAYMENT_LINK',
         items,
-        success_redirect_url: 'https://xendit.co/id/success',
-        failure_redirect_url: 'https://xendit.co/id/failure',
+        success_redirect_url: `${this.frontendUrl}/payment/success?order_id=${external_id}`,
+        failure_redirect_url: `${this.frontendUrl}/payment/failure?order_id=${external_id}`,
       };
 
       this.logger.log(`Payload: ${JSON.stringify(payload)}`);
@@ -190,10 +193,11 @@ async handlePaymentSuccess(callbackData: CallbackSuccessDto) {
 
     this.logger.log(`Processing payment for order: ${callbackData.external_id}`);
 
-    if (order.status === OrderStatus.PAID) {
-      this.logger.warn(`Order ${callbackData.external_id} already paid`);
-      throw new BadRequestException('Order already paid');
-    }
+   // Idempotency check
+if (order.status === OrderStatus.PAID && order.paymentId === callbackData.payment_id) {
+  this.logger.warn(`Duplicate webhook ignored for order ${callbackData.external_id}`);
+  return order;
+}
 
     // Load relations setelah order di-lock
     const orderWithRelations = await queryRunner.manager.findOne(Order, {

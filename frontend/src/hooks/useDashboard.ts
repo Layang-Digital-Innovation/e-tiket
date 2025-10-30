@@ -59,7 +59,14 @@ export function useSalesChart(days: number = 7) {
     queryFn: async () => {
       const response = await apiService.getSalesChart(days);
       console.log('📈 Sales Chart Response:', response);
-      return Array.isArray(response) ? (response as SalesData[]) : [];
+      // Handle both direct array response and wrapped response
+      if (Array.isArray(response)) {
+        return response as SalesData[];
+      }
+      if (response?.data && Array.isArray(response.data)) {
+        return response.data as SalesData[];
+      }
+      return [];
     },
   });
 }

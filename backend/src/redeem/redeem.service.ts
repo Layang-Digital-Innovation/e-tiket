@@ -3,7 +3,7 @@ import { RedeemDto } from './dto/create-redeem.dto';
 import { UpdateRedeemDto } from './dto/update-redeem.dto';
 import { TicketService } from 'src/ticket/ticket.service';
 import { WristbandService } from 'src/wristband/wristband.service';
-import { TicketStatus } from 'src/ticket/entities/ticket.entity';
+import { Ticket, TicketStatus } from 'src/ticket/entities/ticket.entity';
 import { Wristband, WristbandStatus } from 'src/wristband/entities/wristband.entity';
 import { DataSource } from 'typeorm';
 
@@ -11,6 +11,8 @@ export interface RedeemResponse {
   message: string;
   ticketCode: string;
   wristbandCode: string;
+  wristband: Wristband;
+  ticket: Ticket;
 }
 
 @Injectable()
@@ -50,6 +52,8 @@ export class RedeemService {
         message: 'Ticket successfully redeemed to wristband',
         ticketCode: ticket.ticketCode,
         wristbandCode: wristband.wristbandCode!,
+        wristband,
+        ticket
       };
     });
   }
@@ -60,7 +64,7 @@ export class RedeemService {
   async findAllByEventId(eventId: string): Promise<Wristband[]> {
     return this.dataSource.getRepository(Wristband).find({
       where: { status: WristbandStatus.ASSIGNED, event: { id: eventId } },
-      relations: ['assignedTicket', 'event', 'category'],
+      relations: ['assignedTicket', 'assignedTicket.orderItem', 'assignedTicket.orderItem.order', 'assignedTicket.orderItem.attendees', 'event', 'category'],
       order: { assignedAt: 'DESC' },
     });
   }
@@ -71,7 +75,7 @@ export class RedeemService {
   async findOne(id: string): Promise<Wristband | null> {
     return this.dataSource.getRepository(Wristband).findOne({
       where: { id, status: WristbandStatus.ASSIGNED },
-      relations: ['assignedTicket', 'event', 'category'],
+      relations: ['assignedTicket', 'assignedTicket.orderItem', 'assignedTicket.orderItem.order', 'assignedTicket.orderItem.attendees', 'event', 'category'],
     });
   }
 

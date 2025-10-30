@@ -1,4 +1,4 @@
-import { ApiResponse, User, CreateOrderRequest, CreateOrderResponse, CheckInResponse, Wristband, RedeemRequest, RedeemResponse } from '@/types';
+import { ApiResponse, User, Event, CreateOrderRequest, CreateOrderResponse, CheckInResponse, Wristband, RedeemRequest, RedeemResponse, PaginatedResponse, Payout } from '@/types';
 import axios, { AxiosRequestConfig, AxiosError } from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
@@ -222,12 +222,12 @@ class ApiService {
     });
   }
 
-  async getRedeemList(eventId: string): Promise<Wristband[]> {
-    return this.request<Wristband[]>('/api/redeem/event/' + eventId);
+  async getRedeemList(eventId: string): Promise<ApiResponse<Wristband[]>> {
+    return this.request<ApiResponse<Wristband[]>>('/api/redeem/event/' + eventId);
   }
 
-  async getRedeemById(id: string): Promise<Wristband> {
-    return this.request<Wristband>(`/api/redeem/${id}`);
+  async getRedeemById(id: string): Promise<ApiResponse<Wristband>> {
+    return this.request<ApiResponse<Wristband>>(`/api/redeem/${id}`);
   }
 
   // Check-in API
@@ -238,30 +238,106 @@ class ApiService {
     });
   }
 
-  async getAllUsers(params?: {
-    page?: number;
-    limit?: number;
-  }) {
-    const searchParams = new URLSearchParams();
-    if (params?.page) searchParams.append('page', params.page.toString());
-    if (params?.limit) searchParams.append('limit', params.limit.toString());
-    
-    const query = searchParams.toString();
-    return this.request(`/api/users${query ? `?${query}` : ''}`);
+  async getCheckInList(eventId: string): Promise<ApiResponse<Wristband[]>> {
+    return this.request<ApiResponse<Wristband[]>>('/api/check-in/event/' + eventId);
   }
+
+  async getCheckInListByEvent(eventId: string): Promise<ApiResponse<Wristband[]>> {
+    return this.request<ApiResponse<Wristband[]>>('/api/check-in/event/' + eventId);
+  }
+
+
 
   async getAllEvents(params?: {
     page?: number;
     limit?: number;
     status?: string;
-  }) {
+    search?: string;
+  }) : Promise<PaginatedResponse<Event[]>> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
     if (params?.status) searchParams.append('status', params.status);
+    if (params?.search) searchParams.append('search', params.search);
     
     const query = searchParams.toString();
-    return this.request(`/api/event${query ? `?${query}` : ''}`);
+    return this.request <PaginatedResponse<Event[]>>(`/api/event${query ? `?${query}` : ''}`);
+  }
+
+  async getAdminStats() {
+    return this.request('/api/admin-dashboard/stats');
+  }
+
+  async getAllUsers(params?: {
+    page?: number;
+    limit?: number;
+    role?: string;
+    status?: string;
+    search?: string;
+  }) : Promise<PaginatedResponse<User[]>> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    if (params?.role) searchParams.append('role', params.role);
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.search) searchParams.append('search', params.search);
+
+    const query = searchParams.toString();
+    return this.request(`/api/admin-dashboard/users${query ? `?${query}` : ''}`);
+  }
+
+  // Payout API
+  async getOrganizerPayouts(organizerId: string, status?: string) : Promise<PaginatedResponse<Payout[]>> {
+    const searchParams = new URLSearchParams();
+    if (status) searchParams.append('status', status);
+    const query = searchParams.toString();
+    return this.request<PaginatedResponse<Payout[]>>(`/api/payouts/organizer/${organizerId}${query ? `?${query}` : ''}`);
+  }
+
+  async getAllPayouts(status?: string, organizerId?: string) : Promise<PaginatedResponse<Payout[]>> {
+    const searchParams = new URLSearchParams();
+    if (status) searchParams.append('status', status);
+    if (organizerId) searchParams.append('organizerId', organizerId);
+    const query = searchParams.toString();
+    return this.request<PaginatedResponse<Payout[]>>(`/api/payouts${query ? `?${query}` : ''}`);
+  }
+
+  async getPayoutDetail(payoutId: string) : Promise<ApiResponse<Payout>> {
+    return this.request<ApiResponse<Payout>>(`/api/payouts/${payoutId}`);
+  }
+
+  async createPayout(payoutData: any): Promise<Payout> {
+    return this.request<Payout>('/api/payouts', {
+      method: 'POST',
+      data: payoutData,
+    });
+  }
+
+  async approvePayout(payoutId: string, approveData: any): Promise<Payout> {
+    return this.request<Payout>(`/api/payouts/${payoutId}/approve`, {
+      method: 'PATCH',
+      data: approveData,
+    });
+  }
+
+  async rejectPayout(payoutId: string, rejectData: any): Promise<Payout> {
+    return this.request<Payout>(`/api/payouts/${payoutId}/reject`, {
+      method: 'PATCH',
+      data: rejectData,
+    });
+  }
+
+  async markPayoutAsPaid(payoutId: string, referenceNumber?: string): Promise<Payout> {
+    return this.request<Payout>(`/api/payouts/${payoutId}/mark-paid`, {
+      method: 'PATCH',
+      data: referenceNumber ? { referenceNumber } : {},
+    });
+  }
+
+  async cancelPayout(payoutId: string): Promise<Payout> {
+    return this.request<Payout>(`/api/payouts/${payoutId}/cancel`, {
+      method: 'PATCH',
+    });
   }
 }
 

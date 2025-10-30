@@ -62,4 +62,23 @@ export class CheckInService {
   async findAllAssignedWristband() {
     return this.wristbandService.findAssignedWristband();
   }
+
+  async findAllCheckInList() {
+    return this.wristbandService.findAllCheckInList();
+  }
+
+  async findCheckedInWristbandByEventId(eventId: string) {
+    return this.wristbandService.findCheckedInWristbandByEventId(eventId);
+  }
+
+  async findAllCheckInListByEvent(eventId: string) {
+    return this.wristbandService.findCheckedInWristbandByEventId(eventId);
+  }
+
+  /**
+   * Get wristband with event and organizer info for authorization check
+   */
+  async getWristbandWithEvent(wristbandCode: string) {
+    return this.wristbandService.findOneByCodeWithEventAndOrganizer(wristbandCode);
+  }
 }

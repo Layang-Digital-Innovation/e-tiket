@@ -14,3 +14,13 @@ export function formatCurrency(value: number): string {
   }).format(value);
 }
 
+export function stripHtml(html: string): string {
+  if (!html) return '';
+  
+  // Create a temporary DOM element to safely parse HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  
+  // Get the text content without HTML tags
+  return tempDiv.textContent || tempDiv.innerText || '';
+}

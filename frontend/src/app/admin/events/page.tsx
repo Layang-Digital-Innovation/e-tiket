@@ -1,158 +1,209 @@
 'use client';
 
-import { useState } from 'react';
-import Header from '@/components/header';
+import { useState, useEffect } from 'react';
+import { Search, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAllEvents } from '@/hooks/useAdmin';
+import { DataTable } from '@/components/table/DataTable';
+import { eventColumns } from '@/components/table/columns/event-column';
+import { Event, EventOrganizer } from '@/types';
+import { EventDetailDialog, UserDetailDialog } from '@/components/dialog';
+
+
 
 export default function AdminEventsPage() {
-  const [events] = useState([
-    {
-      id: '1',
-      title: 'Konser Musik Jazz',
-      organizer: 'PT. Event Keren',
-      startDate: '2024-02-15',
-      endDate: '2024-02-15',
-      location: 'Jakarta Convention Center',
-      maxCapacity: 500,
-      currentCapacity: 350,
-      price: 150000,
-      isActive: true,
-    },
-    {
-      id: '2',
-      title: 'Workshop Digital Marketing',
-      organizer: 'CV. Organizer Pro',
-      startDate: '2024-02-20',
-      endDate: '2024-02-21',
-      location: 'Hotel Santika Jakarta',
-      maxCapacity: 100,
-      currentCapacity: 85,
-      price: 500000,
-      isActive: true,
-    },
-    {
-      id: '3',
-      title: 'Festival Kuliner Nusantara',
-      organizer: 'PT. Event Keren',
-      startDate: '2024-03-01',
-      endDate: '2024-03-03',
-      location: 'Lapangan Banteng',
-      maxCapacity: 1000,
-      currentCapacity: 120,
-      price: 50000,
-      isActive: true,
-    },
-  ]);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Semua Events
-            </h1>
-            <div className="flex space-x-3">
-              <select className="border border-gray-300 rounded-md px-3 py-2 text-sm">
-                <option value="">Semua Organizer</option>
-                <option value="1">PT. Event Keren</option>
-                <option value="2">CV. Organizer Pro</option>
-              </select>
-              <select className="border border-gray-300 rounded-md px-3 py-2 text-sm">
-                <option value="">Semua Status</option>
-                <option value="active">Aktif</option>
-                <option value="inactive">Nonaktif</option>
-              </select>
-            </div>
-          </div>
+  // Dialog states
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedUser, setSelectedUser] = useState<EventOrganizer | null>(null);
+  const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
 
-          {/* Events Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event) => (
-              <div key={event.id} className="bg-white overflow-hidden shadow rounded-lg">
-                <div className="px-4 py-5 sm:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-900 truncate">
-                      {event.title}
-                    </h3>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        event.isActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {event.isActive ? 'Aktif' : 'Nonaktif'}
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <p>
-                      <span className="font-medium">Organizer:</span> {event.organizer}
-                    </p>
-                    <p>
-                      <span className="font-medium">Tanggal:</span>{' '}
-                      {new Date(event.startDate).toLocaleDateString('id-ID')}
-                      {event.startDate !== event.endDate && 
-                        ` - ${new Date(event.endDate).toLocaleDateString('id-ID')}`
-                      }
-                    </p>
-                    <p>
-                      <span className="font-medium">Lokasi:</span> {event.location}
-                    </p>
-                    <p>
-                      <span className="font-medium">Kapasitas:</span>{' '}
-                      {event.currentCapacity} / {event.maxCapacity}
-                    </p>
-                    <p>
-                      <span className="font-medium">Harga:</span>{' '}
-                      Rp {event.price.toLocaleString('id-ID')}
-                    </p>
-                  </div>
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
 
-                  <div className="mt-4">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{
-                          width: `${(event.currentCapacity / event.maxCapacity) * 100}%`,
-                        }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {Math.round((event.currentCapacity / event.maxCapacity) * 100)}% terisi
-                    </p>
-                  </div>
+    return () => clearTimeout(timer);
+  }, [search]);
 
-                  <div className="mt-4 flex justify-between">
-                    <button className="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
-                      Lihat Detail
-                    </button>
-                    <button className="text-gray-600 hover:text-gray-900 text-sm font-medium">
-                      Laporan
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+  const apiStatusFilter = statusFilter === "all" ? undefined : statusFilter;
 
-          {/* Pagination */}
-          <div className="mt-8 flex justify-center">
-            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-              <button className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                Previous
-              </button>
-              <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                1
-              </button>
-              <button className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-                Next
-              </button>
-            </nav>
-          </div>
+  const { data: eventsResponse, isLoading, error } = useAllEvents({
+    page,
+    limit,
+    status: apiStatusFilter,
+    search: debouncedSearch.trim() || undefined,
+  })
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    setPage(1); // Reset to first page when searching
+  };
+
+  const handleStatusFilter = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
+  };
+
+  // Dialog handlers
+  const handleViewEventDetail = (event: Event) => {
+    console.log('handleViewEventDetail called with:', event);
+    setSelectedEvent(event);
+    setEventDialogOpen(true);
+  };
+
+  const handleViewUserDetail = (user: EventOrganizer) => {
+    console.log('handleViewUserDetail called with:', user);
+    setSelectedUser(user);
+    setUserDialogOpen(true);
+  };
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-2">Error loading events</p>
+          <p className="text-sm text-gray-500">Please try again later</p>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 p-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Kelola Events</h1>
+          <p className="text-gray-600">Pantau dan kelola semua event di platform</p>
+        </div>
+        <Button>
+          <Plus className="w-4 h-4 mr-2" />
+          Tambah Event
+        </Button>
+      </div>
+
+      {/* Filters and Search */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Filter & Pencarian</CardTitle>
+          <CardDescription>
+            Cari event berdasarkan nama, deskripsi, atau filter berdasarkan status
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Cari nama event atau deskripsi..."
+                  value={search}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            {/* Status Filter */}
+            <div className="w-full md:w-48">
+              <Select value={statusFilter} onValueChange={handleStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Semua Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Status</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="cancelled">Dibatalkan</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Events Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Daftar Events</CardTitle>
+          <CardDescription>
+            Total {eventsResponse?.pagination?.total || 0} event ditemukan
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Memuat data...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+             <DataTable 
+               columns={eventColumns({ 
+                 onViewEventDetail: handleViewEventDetail,
+                 onViewUserDetail: handleViewUserDetail
+               })} 
+               data={eventsResponse?.data || []}
+             />
+
+              {/* Pagination */}
+              {eventsResponse?.data && eventsResponse.pagination.total > eventsResponse.pagination.limit && (
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-gray-500">
+                    Menampilkan {((eventsResponse.pagination.page - 1) * eventsResponse.pagination.limit) + 1} sampai{' '}
+                    {Math.min(eventsResponse.pagination.page * eventsResponse.pagination.limit, eventsResponse.pagination.total)} dari{' '}
+                    {eventsResponse.pagination.total} hasil
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page - 1)}
+                      disabled={page === 1}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page + 1)}
+                      disabled={page === Math.ceil(eventsResponse.pagination.total / eventsResponse.pagination.limit)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialogs */}
+      <EventDetailDialog
+        event={selectedEvent}
+        open={eventDialogOpen}
+        onOpenChange={setEventDialogOpen}
+      />
     </div>
   );
 }

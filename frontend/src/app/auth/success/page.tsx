@@ -86,12 +86,12 @@ export default function AuthSuccessPage() {
 
   const getUserRedirectPath = (role: string): string => {
     switch (role) {
-      case 'admin':
+      case 'ADMIN':
         return '/admin/dashboard';
-      case 'event_organizer':
+      case 'EVENT_ORGANIZER':
         return '/organizer/dashboard';
       default:
-        return '/dashboard';
+        return '/';
     }
   };
 

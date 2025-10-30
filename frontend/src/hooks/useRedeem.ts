@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
-import { RedeemRequest, RedeemResponse, Wristband } from '@/types';
+import { ApiResponse, RedeemRequest, RedeemResponse, Wristband } from '@/types';
 import { toast } from 'sonner';
 
 // Hook untuk redeem ticket
@@ -26,21 +26,21 @@ export function useRedeemTicket() {
 
 // Hook untuk get list redeem (wristband yang sudah assigned)
 export function useRedeemList(eventId: string) {
-  return useQuery<Wristband[], Error>({
+  return useQuery({
     queryKey: ['redeemList', eventId],
     queryFn: async () => {
       const response = await apiService.getRedeemList(eventId);
-      console.log('🔍 Redeem List Response:', response);
-      console.log('🔍 Is Array?', Array.isArray(response));
-      // Ensure response is an array
-      return Array.isArray(response) ? response : [];
+      return response;
     },
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    gcTime: 300000, // Keep in cache for 5 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 }
 
 // Hook untuk get redeem by ID
 export function useRedeemById(id: string) {
-  return useQuery<Wristband, Error>({
+  return useQuery({
     queryKey: ['redeem', id],
     queryFn: async () => {
       const response = await apiService.getRedeemById(id);

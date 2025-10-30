@@ -137,31 +137,40 @@ export class OrderService {
 
       Logger.log('SAVED ORDER ', savedOrder);
 
-      const event = await this.eventsService.findOne(
-        savedOrder.orderItems[0].ticketCategory.eventId,
-      );
-
-      const invoice = await this.paymentService.createInvoice({
-        external_id: savedOrder.transactionCode,
-        description: `Pembelian Tiket Event ${event.title}`,
-        metadata: {
-          event_id: savedOrder.orderItems[0].ticketCategory.eventId,
-          event_name: event.title,
-        },
-        amount: totalAmount,
-        buyerEmail: createOrderDto.buyerEmail,
-        buyerName: createOrderDto.buyerFullName,
-        buyerPhoneNumber: createOrderDto.buyerPhoneNumber,
-        items: savedOrder.orderItems.map((item) => ({
-          name: item.ticketCategory.name,
-          price: Number(item.unitPrice),
-          quantity: item.quantity,
-        })),
-      });
-
       await queryRunner.commitTransaction();
 
-      Logger.log('Invoice :', invoice);
+      // Create invoice AFTER transaction commit to avoid blocking on external API
+      let invoice;
+      try {
+        const event = await this.eventsService.findOne(
+          savedOrder.orderItems[0].ticketCategory.eventId,
+        );
+
+        invoice = await this.paymentService.createInvoice({
+          external_id: savedOrder.transactionCode,
+          description: `Pembelian Tiket Event ${event.title}`,
+          metadata: {
+            event_id: savedOrder.orderItems[0].ticketCategory.eventId,
+            event_name: event.title,
+          },
+          amount: totalAmount,
+          buyerEmail: createOrderDto.buyerEmail,
+          buyerName: createOrderDto.buyerFullName,
+          buyerPhoneNumber: createOrderDto.buyerPhoneNumber,
+          items: savedOrder.orderItems.map((item) => ({
+            name: item.ticketCategory.name,
+            price: Number(item.unitPrice),
+            quantity: item.quantity,
+          })),
+        });
+
+        Logger.log('Invoice :', invoice);
+      } catch (invoiceError) {
+        Logger.error(`Failed to create invoice for order ${savedOrder.id}:`, invoiceError);
+        // Order is already saved, but invoice creation failed
+        // Return order without payment URL - user can retry payment later
+        invoice = null;
+      }
 
       // Schedule order expiration job (15 minutes = 900 seconds)
       try {
@@ -191,7 +200,7 @@ export class OrderService {
 
       return {
         ...finalOrder,
-        paymentUrl: invoice.invoice_url,
+        paymentUrl: invoice?.invoice_url || null,
       };
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -239,6 +248,27 @@ export class OrderService {
     return ApiResponseDto.success({
       message: 'Order removed successfully',
     });
+  }
+
+  getTotalRevenue(): Promise<number> {
+    return this.orderRepository
+      .createQueryBuilder('order')
+      .select('SUM(order.totalAmount)', 'total')
+      .where('order.status = :status', { status: OrderStatus.PAID })
+      .getRawOne()
+      .then(result => parseFloat(result.total) || 0);
+  }
+
+  getRevenueBeforeDate(date: Date): Promise<number> {
+    return this.orderRepository
+      .createQueryBuilder('order')
+      .select('SUM(order.totalAmount)', 'total')
+      .where('order.status = :status AND order.createdAt < :date', {
+        status: OrderStatus.PAID,
+        date
+      })
+      .getRawOne()
+      .then(result => parseFloat(result.total) || 0);
   }
 
   /**

@@ -26,13 +26,15 @@ export interface LoginResponse {
 // Event Organizer Types
 export interface EventOrganizer {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone?: string;
   description?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  profileImage?: string;
 }
 
 // Event Types
@@ -44,8 +46,6 @@ export interface Event {
   startDate: string;
   endDate: string;
   location: string;
-  maxCapacity: number;
-  currentCapacity: number;
   imageUrl?: string;
   basePrice?: number;
   termsAndConditions?: string;
@@ -96,11 +96,15 @@ export interface ApiResponse<T> {
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  success: boolean;
+  message?: string;
+  data: T;
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+  };
+  statusCode?: number;
 }
 
 // Form Types
@@ -178,9 +182,9 @@ export interface Order {
   eventId: string;
   event?: Event;
   userId?: string;
-  buyerName: string;
-  buyerEmail: string;
-  buyerPhone: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
   totalAmount: number;
   status: 'pending' | 'paid' | 'cancelled' | 'expired';
   paymentMethod?: string;
@@ -198,6 +202,8 @@ export interface OrderItemDetail {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+  order?: Order;
+  attendees?: Attendee[];
 }
 
 export interface BuyerData {
@@ -220,6 +226,20 @@ export interface CheckoutState {
 export interface RedeemRequest {
   ticketCode: string;
   wristbandCode: string;
+}
+
+// Attendee Types
+export interface Attendee {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber?: string;
+  identityType?: string;
+  identityNumber?: string;
+  gender?: string;
+  address?: string;
+  birthDate?: string;
+  // Removed ticket and orderItem to prevent circular references
 }
 
 export interface RedeemResponse {
@@ -260,8 +280,58 @@ export interface Ticket {
   ticketCode: string;
   status: 'unused' | 'redeemed' | 'checked_in';
   redeemedAt?: string;
-  assignedWristband?: Wristband;
+  // Removed assignedWristband to prevent circular reference
+  attendee?: Attendee;
   orderItem?: OrderItemDetail;
   createdAt: string;
   updatedAt: string;
+}
+
+// Payout Types
+export type PayoutStatus = 'pending' | 'approved' | 'rejected' | 'paid' | 'cancelled';
+export type BankType = 'bca' | 'mandiri' | 'bni' | 'cimb' | 'permata' | 'other';
+
+export interface Payout {
+  id: string;
+  organizerId: string;
+  organizer?: User;
+  eventId?: string;
+  event?: Event;
+  grossAmount: number;
+  platformFee: number;
+  netAmount: number;
+  status: PayoutStatus;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankType: BankType;
+  bankBranch?: string;
+  notes?: string;
+  rejectionReason?: string;
+  referenceNumber?: string;
+  approvedAt?: string;
+  paidAt?: string;
+  rejectedAt?: string;
+  approvedById?: string;
+  approvedBy?: User;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePayoutRequest {
+  eventId?: string;
+  netAmount: number;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankType: BankType;
+  bankBranch?: string;
+  notes?: string;
+}
+
+export interface ApprovePayoutRequest {
+  notes?: string;
+  referenceNumber?: string;
+}
+
+export interface RejectPayoutRequest {
+  rejectionReason: string;
 }

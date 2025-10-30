@@ -32,7 +32,7 @@ export function useEvents(params?: {
     queryKey: eventKeys.list(params || {}),
     queryFn: async () => {
       const response = await apiService.getEvents(params);
-      return response as PaginatedResponse<Event>;
+      return response as PaginatedResponse<Event[]>;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
@@ -47,7 +47,7 @@ export function useMyEvents(params?: { page?: number; limit?: number }) {
     queryKey: eventKeys.myEventsList(params || {}),
     queryFn: async () => {
       const response = await apiService.getMyEvents(params);
-      return response as PaginatedResponse<Event>;
+      return response as PaginatedResponse<Event[]>;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes

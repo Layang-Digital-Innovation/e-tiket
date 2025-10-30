@@ -3,7 +3,7 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { Ticket } from './entities/ticket.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, Repository, LessThan } from 'typeorm';
 
 @Injectable()
 export class TicketService {
@@ -65,6 +65,18 @@ export class TicketService {
 
   remove(id: string) {
     return this.ticketRepository.delete(id);
+  }
+
+  getTotalTickets(): Promise<number> {
+    return this.ticketRepository.count();
+  }
+
+  getTicketsCountBeforeDate(date: Date): Promise<number> {
+    return this.ticketRepository.count({
+      where: {
+        createdAt: LessThan(date)
+      }
+    });
   }
 
 

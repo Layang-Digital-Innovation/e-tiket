@@ -22,7 +22,7 @@ export class CreateOrderDto {
     @IsOptional()
     buyerIdentityNumber?: string;
 
-    @IsPhoneNumber("ID")
+    @IsString()
     @IsNotEmpty()
     buyerPhoneNumber: string;
 

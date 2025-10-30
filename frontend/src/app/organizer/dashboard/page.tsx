@@ -1,14 +1,16 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useDashboardStats, useRecentEvents, useSalesChart } from '@/hooks/useDashboard';
-import { Loader2, Calendar, Ticket as TicketIcon, DollarSign, TrendingUp, Plus, FileText } from 'lucide-react';
+import { Loader2, Calendar, Ticket as TicketIcon, DollarSign, TrendingUp, Plus, FileText, QrCode, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Badge } from '@/components/ui/badge';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 
 export default function EODashboard() {
+  const router = useRouter();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: recentEvents = [], isLoading: eventsLoading } = useRecentEvents(5);
   const { data: salesData = [], isLoading: salesLoading } = useSalesChart(7);
@@ -39,13 +41,25 @@ export default function EODashboard() {
 
   const chartConfig = {
     sales: {
-      label: 'Penjualan',
-      color: 'hsl(var(--chart-1))',
+      label: 'Jumlah Penjualan',
+      color: 'var(--chart-1)',
+    },
+    revenue: {
+      label: 'Pendapatan',
+      color: 'var(--chart-2)',
     },
   };
 
   // Check if sales data has any non-zero values
-  const hasSalesData = salesData.some(item => item.sales > 0);
+  const hasSalesData = salesData.some(item => item.sales > 0 || item.revenue > 0);
+  
+  // Transform data for chart display
+  const chartData = salesData.map(item => ({
+    ...item,
+    date: item.date,
+    sales: item.sales,
+    revenue: Math.round(item.revenue / 1000), // Convert to thousands for better display
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -58,6 +72,47 @@ export default function EODashboard() {
             </div>
           ) : (
             <>
+              {/* Operational Actions */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {/* Check-in Card */}
+                <button
+                  onClick={() => router.push('/checkin')}
+                  className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-lg p-6 hover:shadow-lg transition-all hover:scale-105 text-left group"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                          <QrCode className="w-6 h-6 text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">Check-in Peserta</h3>
+                      </div>
+                      <p className="text-sm text-gray-600">Scan QR code untuk check-in wristband peserta</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-green-600 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+
+                {/* Redeem Card */}
+                <button
+                  onClick={() => router.push('/redeem')}
+                  className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-lg p-6 hover:shadow-lg transition-all hover:scale-105 text-left group"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                          <TicketIcon className="w-6 h-6 text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">Redeem Tiket</h3>
+                      </div>
+                      <p className="text-sm text-gray-600">Tukarkan tiket dengan wristband peserta</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+              </div>
+
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 {/* Total Events */}
@@ -211,30 +266,54 @@ export default function EODashboard() {
                         </p>
                       </div>
                     ) : (
-                      <ChartContainer config={chartConfig} className="h-64">
-                        <LineChart data={salesData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis
-                            dataKey="date"
-                            tickFormatter={(value) => format(new Date(value), 'dd/MM')}
-                            fontSize={12}
-                          />
-                          <YAxis fontSize={12} />
-                          <ChartTooltip
-                            content={<ChartTooltipContent />}
-                            labelFormatter={(value) => format(new Date(value), 'dd MMMM yyyy')}
-                            formatter={(value) => [value, 'Penjualan']}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="sales"
-                            stroke="var(--color-sales)"
-                            strokeWidth={2}
-                            dot={{ fill: 'var(--color-sales)', strokeWidth: 2, r: 4 }}
-                            activeDot={{ r: 6 }}
-                          />
-                        </LineChart>
-                      </ChartContainer>
+                      <div className="w-full h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="date"
+                              tickFormatter={(value) => format(new Date(value), 'dd/MM')}
+                              fontSize={12}
+                            />
+                            <YAxis 
+                              yAxisId="left"
+                              fontSize={12}
+                              width={50}
+                            />
+                            <YAxis 
+                              yAxisId="right"
+                              orientation="right"
+                              fontSize={12}
+                              width={50}
+                            />
+                            <ChartTooltip
+                              contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc' }}
+                              labelFormatter={(value) => format(new Date(value), 'dd MMM yyyy')}
+                            />
+                            <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                            <Line
+                              type="monotone"
+                              dataKey="sales"
+                              stroke="#3b82f6"
+                              strokeWidth={2}
+                              dot={{ fill: '#3b82f6', r: 3 }}
+                              activeDot={{ r: 5 }}
+                              yAxisId="left"
+                              name="Jumlah Penjualan"
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="revenue"
+                              stroke="#10b981"
+                              strokeWidth={2}
+                              dot={{ fill: '#10b981', r: 3 }}
+                              activeDot={{ r: 5 }}
+                              yAxisId="right"
+                              name="Pendapatan (Rb)"
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
                     )}
                   </div>
                 </div>
