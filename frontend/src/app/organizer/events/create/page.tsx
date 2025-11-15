@@ -6,7 +6,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiService } from '@/services/api';
-import { CreateEventRequest } from '@/types/api';
+import { CreateEventRequest, EventTypeApi, RedeemStrategyApi } from '@/types/api';
 import {
   Form,
   FormControl,
@@ -25,9 +25,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { error } from 'console';
 
 const eventFormSchema = z.object({
   title: z.string().min(1, 'Judul event wajib diisi'),
@@ -41,6 +43,7 @@ const eventFormSchema = z.object({
   }),
   startTime: z.string().min(1, 'Waktu mulai wajib diisi'),
   endTime: z.string().min(1, 'Waktu selesai wajib diisi'),
+  eventType: z.nativeEnum(EventTypeApi, { required_error: 'Jenis event wajib dipilih' }),
   imageUrl: z.string().optional(),
   termsAndConditions: z.string().optional(),
 }).refine(data => {
@@ -64,6 +67,7 @@ export default function CreateEventPage() {
       endDate: new Date(),
       startTime: '08:00',
       endTime: '17:00',
+      eventType: EventTypeApi.CONCERT,
       imageUrl: '',
       termsAndConditions: '',
     },
@@ -91,6 +95,7 @@ export default function CreateEventPage() {
         location: values.location,
         startDate: startDateTime.toISOString(),
         endDate: endDateTime.toISOString(),
+        eventType: values.eventType,
         imageUrl: values.imageUrl || undefined,
         termsAndConditions: values.termsAndConditions || undefined,
       };
@@ -117,11 +122,38 @@ export default function CreateEventPage() {
 
           <div className="bg-white shadow rounded-lg">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-6">
+              <form onSubmit={form.handleSubmit(onSubmit, (error) => {
+                console.error('Failed to create event:', error);
+                alert('Gagal membuat event. Silakan coba lagi.');
+              })} className="space-y-6 p-6">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Informasi Dasar</h3>
                   
                   <div className="grid grid-cols-1 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="eventType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Jenis Event *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Pilih jenis event" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.values(EventTypeApi).map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                
                     <FormField
                       control={form.control}
                       name="title"

@@ -12,10 +12,10 @@ export default function CheckInPage() {
   const events = response?.data || [];
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
-  const handleSelectEvent = (eventId: string) => {
-    setSelectedEventId(eventId);
-    // Navigate to the dynamic route
-    router.push(`/checkin/${eventId}`);
+  const handleSelectEvent = (eventSlug: string) => {
+    setSelectedEventId(eventSlug);
+    // Navigate to the slug-based dynamic route
+    router.push(`/checkin/${eventSlug}`);
   };
 
 
@@ -78,7 +78,7 @@ export default function CheckInPage() {
 
                   {/* Button */}
                   <button
-                    onClick={() => handleSelectEvent(event.id)}
+                    onClick={() => handleSelectEvent(event.slug)}
                     className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all"
                   >
                     <QrCode className="w-4 h-4" />

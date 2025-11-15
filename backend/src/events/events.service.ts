@@ -12,6 +12,7 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { UserRole } from '../users/entities/user.entity';
 import slugify from 'slugify';
 import { TicketCategory } from '../ticket_categories/entities/ticket_category.entity';
+import { EventType, RedeemStrategy } from './enums/event.enums';
 
 @Injectable()
 export class EventsService {
@@ -48,8 +49,13 @@ export class EventsService {
       slug = `${baseSlug}-${counter++}`;
     }
 
+    const redeemStrategy =
+      createEventDto.redeemStrategy ??
+      this.getDefaultRedeemStrategy(createEventDto.eventType);
+
     const event = this.eventsRepository.create({
       ...createEventDto,
+      redeemStrategy,
       startDate,
       endDate,
       slug,
@@ -148,8 +154,14 @@ export class EventsService {
       }
     }
 
+    const redeemStrategy = this.resolveRedeemStrategyUpdate(
+      event,
+      updateEventDto,
+    );
+
     await this.eventsRepository.update(id, {
       ...updateEventDto,
+      redeemStrategy,
       startDate: updateEventDto.startDate
         ? new Date(updateEventDto.startDate)
         : undefined,
@@ -232,5 +244,32 @@ export class EventsService {
     return this.eventsRepository.count({
       where: { status: EventStatus.PUBLISHED }
     });
+  }
+
+  private getDefaultRedeemStrategy(eventType: EventType): RedeemStrategy {
+    switch (eventType) {
+      case EventType.RUNNING:
+        return RedeemStrategy.BIB;
+      case EventType.SEMINAR:
+        return RedeemStrategy.NONE;
+      case EventType.CONCERT:
+      default:
+        return RedeemStrategy.WRISTBAND;
+    }
+  }
+
+  private resolveRedeemStrategyUpdate(
+    existingEvent: Event,
+    updateEventDto: UpdateEventDto,
+  ): RedeemStrategy {
+    if (updateEventDto.redeemStrategy) {
+      return updateEventDto.redeemStrategy;
+    }
+
+    if (updateEventDto.eventType) {
+      return this.getDefaultRedeemStrategy(updateEventDto.eventType);
+    }
+
+    return existingEvent.redeemStrategy;
   }
 }

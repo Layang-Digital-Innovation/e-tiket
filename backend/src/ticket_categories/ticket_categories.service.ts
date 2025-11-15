@@ -50,16 +50,16 @@ export class TicketCategoriesService {
         `✅ Ticket Category created: ${savedTicketCategory.id} | Max Quantity: ${savedTicketCategory.maxQuantity}`,
       );
 
-      // ✅ 4. Generate Wristbands secara asynchronous (pakai Bull Queue)
-      await this.wristbandService.generateWristbandByMaxCapacity(
-        savedTicketCategory.maxQuantity,
-        savedTicketCategory.eventId,
-        savedTicketCategory.id,
-      );
+      // // ✅ 4. Generate Wristbands secara asynchronous (pakai Bull Queue)
+      // await this.wristbandService.generateWristbandByMaxCapacity(
+      //   savedTicketCategory.maxQuantity,
+      //   savedTicketCategory.eventId,
+      //   savedTicketCategory.id,
+      // );
 
-      this.logger.log(
-        `🪪 Successfully queued generation of ${savedTicketCategory.maxQuantity} wristbands for category ${savedTicketCategory.id}`,
-      );
+      // this.logger.log(
+      //   `🪪 Successfully queued generation of ${savedTicketCategory.maxQuantity} wristbands for category ${savedTicketCategory.id}`,
+      // );
 
       // ✅ 5. Update basePrice event dengan harga termurah
       await this.eventsService.updateBasePrice(savedTicketCategory.eventId);

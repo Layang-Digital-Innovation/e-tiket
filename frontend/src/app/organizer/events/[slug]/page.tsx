@@ -2,6 +2,7 @@
 
 import { use } from 'react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { useEventBySlug } from '@/hooks/useEvents';
 import { useTicketCategories } from '@/hooks/useTickets';
 import { RichTextDisplay } from '@/components/ui/rich-text-display';
@@ -50,6 +51,51 @@ export default function EOEventDetailPage({ params }: { params: Promise<{ slug: 
       label: 'Tersisa',
       color: 'var(--chart-2)',
     },
+  };
+
+  const exportAttendanceCsv = async () => {
+    if (!event?.id) return;
+    try {
+      const res = await (await import('@/services/api')).apiService.getCheckInListByEvent(event.id);
+      const list = (res as any).data as any[];
+
+      const rows = list.map((wb: any, idx: number) => {
+        const ticket = wb.assignedTicket || {};
+        const attendee = ticket.attendee || (ticket.orderItem?.attendees?.[0] ?? {});
+        return {
+          No: (idx + 1).toString(),
+          Nama: attendee.fullName || '',
+          Email: attendee.email || '',
+          Telepon: attendee.phoneNumber || '',
+          TicketCode: ticket.ticketCode || '',
+          Status: wb.status || ticket.status || '',
+          'Waktu Check-in': (wb.checkedInAt || ticket.checkedInAt) ? new Date(wb.checkedInAt || ticket.checkedInAt).toLocaleString('id-ID') : '',
+        };
+      });
+
+      const headers = ['No','Nama','Email','Telepon','TicketCode','Status','Waktu Check-in'];
+      const csv = [
+        '\uFEFF' + headers.join(','),
+        ...rows.map(r => headers.map(h => {
+          const val = (r as any)[h] ?? '';
+          const s = String(val).replace(/"/g, '""');
+          return `"${s}` + `"`;
+        }).join(',')),
+      ].join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `daftar-hadir-${event.slug}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      console.error('Export attendance failed', e);
+      alert(e?.message || 'Gagal mengekspor daftar hadir');
+    }
   };
 
   // Loading State
@@ -410,6 +456,17 @@ export default function EOEventDetailPage({ params }: { params: Promise<{ slug: 
                   <CardTitle>Aksi Cepat</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
+                  {event.eventType === 'SEMINAR' && (
+                    <Button onClick={exportAttendanceCsv} className="w-full text-left justify-start px-3 py-2 text-sm">
+                      Export Daftar Hadir (CSV)
+                    </Button>
+                  )}
+                  <Link
+                    href={`/organizer/events/${event.slug}/redeem-items`}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-secondary rounded-md transition-colors flex items-center gap-2"
+                  >
+                    <span>Kelola Redeem Items</span>
+                  </Link>
                   <Link
                     href={`/redeem/${event.id}`}
                     className="w-full text-left px-3 py-2 text-sm hover:bg-secondary rounded-md transition-colors flex items-center gap-2"

@@ -61,7 +61,8 @@ export default function RedeemPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <Link
-                        href={`/redeem/${event.id}`}
+                        key={event.id}
+                        href={`/redeem/${event.slug}`}
                         className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all"
                       >
                         <span>Redeem Tiket</span>

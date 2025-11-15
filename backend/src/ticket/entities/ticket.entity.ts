@@ -11,6 +11,7 @@ import { OrderItem } from 'src/order_item/entities/order_item.entity';
 import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
 import { Wristband } from 'src/wristband/entities/wristband.entity';
 import { AuditEntity } from 'src/common/entities/audit.entity';
+import { RedeemItem } from '../../redeem/entities/redeem-item.entity';
 import { Attendee } from 'src/attendees/entities/attendee.entity';
 
 export enum TicketStatus {
@@ -50,6 +51,13 @@ export class Ticket extends AuditEntity {
   })
   @JoinColumn({ name: 'assigned_wristband_id' })
   assignedWristband?: Wristband;
+
+  @OneToOne(() => RedeemItem, (redeemItem) => redeemItem.ticket, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'redeem_item_id' })
+  assignedRedeemItem?: RedeemItem;
 
 
   @ManyToOne(() => OrderItem, (orderItem) => orderItem.tickets, {

@@ -3,7 +3,7 @@ import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 
 export interface EmailJobData {
-  type: 'ticket' | 'order-summary';
+  type: 'ticket' | 'order-summary' | 'webinar-access';
   data: any;
 }
 
@@ -57,5 +57,22 @@ export class EmailQueueService {
       data,
     });
     this.logger.log(`Added order summary email job for ${data.email}`);
+  }
+
+  async addWebinarAccessEmail(data: {
+    to: string;
+    attendeeName: string;
+    eventTitle: string;
+    startAt?: string | Date;
+    endAt?: string | Date;
+    timezone?: string;
+    webinarJoinUrl: string;
+    webinarNotes?: string;
+  }) {
+    await this.emailQueue.add('send-webinar-access-email', {
+      type: 'webinar-access',
+      data,
+    });
+    this.logger.log(`Added webinar access email job for ${data.to}`);
   }
 }

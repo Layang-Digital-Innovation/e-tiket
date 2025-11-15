@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EventType, RedeemStrategy } from '@/types';
 
 const eventFormSchema = z.object({
   title: z.string().min(1, 'Judul event wajib diisi'),
@@ -32,6 +33,7 @@ const eventFormSchema = z.object({
   }),
   startTime: z.string().min(1, 'Waktu mulai wajib diisi'),
   endTime: z.string().min(1, 'Waktu selesai wajib diisi'),
+  eventType: z.nativeEnum(EventType, { required_error: 'Jenis event wajib dipilih' }),
   imageUrl: z.string().optional(),
   termsAndConditions: z.string().optional(),
   status: z.enum(['draft', 'published', 'cancelled']),
@@ -60,6 +62,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
       endDate: new Date(),
       startTime: '08:00',
       endTime: '17:00',
+      eventType: EventType.CONCERT,
       imageUrl: '',
       termsAndConditions: '',
       status: 'draft',
@@ -80,6 +83,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
         endDate: endDate,
         startTime: startDate.toTimeString().slice(0, 5),
         endTime: endDate.toTimeString().slice(0, 5),
+        eventType: ((event as any).eventType as EventType) || EventType.CONCERT,
         imageUrl: event.imageUrl || '',
         termsAndConditions: event.termsAndConditions || '',
         status: event.status || 'draft',
@@ -112,6 +116,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
           location: values.location,
           startDate: startDateTime.toISOString(),
           endDate: endDateTime.toISOString(),
+          eventType: values.eventType,
           imageUrl: values.imageUrl || undefined,
           termsAndConditions: values.termsAndConditions || undefined,
           status: values.status,
@@ -198,6 +203,31 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
                   <CardDescription>Informasi utama tentang event Anda</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="eventType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Jenis Event *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Pilih jenis event" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.values(EventType).map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="title"

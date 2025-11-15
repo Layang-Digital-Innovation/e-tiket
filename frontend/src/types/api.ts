@@ -1,3 +1,15 @@
+export enum EventTypeApi {
+  CONCERT = 'CONCERT',
+  RUNNING = 'RUNNING',
+  SEMINAR = 'SEMINAR',
+}
+
+export enum RedeemStrategyApi {
+  WRISTBAND = 'wristband',
+  BIB = 'bib',
+  NONE = 'none',
+}
+
 export interface Event {
   id: string;
   title: string;
@@ -5,6 +17,7 @@ export interface Event {
   startDate: string;
   endDate: string;
   location: string;
+  eventType?: EventTypeApi;
   capacity: number;
   price: number;
   status: 'draft' | 'published' | 'cancelled';
@@ -72,6 +85,7 @@ export interface CreateEventRequest {
   startDate: string;
   endDate: string;
   location: string;
+  eventType: EventTypeApi;
   imageUrl?: string;
   termsAndConditions?: string;
 }

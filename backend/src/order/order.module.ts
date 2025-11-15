@@ -12,6 +12,7 @@ import { PaymentModule } from 'src/payment/payment.module';
 import { OrderCleanupService } from './order-cleanup.service';
 import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
 import { OrderQueueModule } from './order-queue.module';
+import { EmailModule } from 'src/email/email.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { OrderQueueModule } from './order-queue.module';
     EventsModule,
     AttendeesModule,
     PaymentModule,
+    EmailModule,
     forwardRef(() => OrderQueueModule),
   ],
   controllers: [OrderController],

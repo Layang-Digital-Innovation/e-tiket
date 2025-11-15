@@ -19,7 +19,7 @@ const QrScanner = dynamic(() => import('@/components/QrScanner'), {
 });
 
 export default function CheckInPage({ params }: { params: Promise<{ eventId: string }> }) {
-  const { eventId } = use(params);
+  const { eventId: eventSlug } = use(params); // eventId is actually eventSlug now
   const router = useRouter();
   const [wristbandCode, setWristbandCode] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -34,10 +34,10 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
 
   // Fetch check-in data for specific event
   useEffect(() => {
-    if (eventId) {
+    if (eventSlug) {
       setIsLoadingEventData(true);
       apiService
-        .getCheckInListByEvent(eventId)
+        .getCheckInListByEventSlug(eventSlug)
         .then((response: any) => {
           if (response.success && Array.isArray(response.data)) {
             setEventCheckInData(response.data);
@@ -51,7 +51,7 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
           setIsLoadingEventData(false);
         });
     }
-  }, [eventId]);
+  }, [eventSlug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,8 +74,8 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
       setWristbandCode('');
       
       // Refresh event check-in data after successful check-in
-      if (eventId) {
-        apiService.getCheckInListByEvent(eventId).then((response: any) => {
+      if (eventSlug) {
+        apiService.getCheckInListByEventSlug(eventSlug).then((response: any) => {
           if (response.success && Array.isArray(response.data)) {
             setEventCheckInData(response.data);
           }
@@ -117,9 +117,9 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
           </button>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Check-in Wristband</h1>
           <p className="text-gray-600">Scan wristband untuk check-in peserta event</p>
-          {eventId && (
+          {eventSlug && (
             <p className="text-sm text-gray-500 mt-2">
-              Event ID: <span className="font-mono font-semibold">{eventId}</span>
+              Event Slug: <span className="font-mono font-semibold">{eventSlug}</span>
             </p>
           )}
         </div>

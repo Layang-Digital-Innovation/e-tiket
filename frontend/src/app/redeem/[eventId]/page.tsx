@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRedeemTicket, useRedeemList } from '@/hooks/useRedeem';
-import { Ticket, CheckCircle, AlertCircle, Loader2, QrCode, Scan } from 'lucide-react';
+import { useEventBySlug } from '@/hooks/useEvents';
+import { Ticket, CheckCircle, AlertCircle, Loader2, QrCode, Scan, User, Calendar, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { Badge } from '@/components/ui/badge';
-import { useParams } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useParams, useRouter } from 'next/navigation';
+import { RedeemStrategy } from '@/types';
 
 // Dynamic import QR Scanner to avoid SSR issues
 const QrScanner = dynamic(() => import('@/components/QrScanner'), {
@@ -17,16 +20,20 @@ const QrScanner = dynamic(() => import('@/components/QrScanner'), {
 
 export default function RedeemPage() {
   const [ticketCode, setTicketCode] = useState('');
-  const [wristbandCode, setWristbandCode] = useState('');
+  const [itemCode, setItemCode] = useState(''); // Generic item code (wristband/bib/etc)
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [scanningFor, setScanningFor] = useState<'ticket' | 'wristband'>('ticket');
+  const [scanningFor, setScanningFor] = useState<'ticket' | 'item'>('ticket');
   const [lastRedeemedTicket, setLastRedeemedTicket] = useState<string>('');
 
-  const { eventId } = useParams();
+  const { eventId: eventSlug } = useParams(); // eventId is actually eventSlug now
+  const router = useRouter();
   const redeemMutation = useRedeemTicket();
-  const { data: redeemList, isLoading: isLoadingList } = useRedeemList(eventId as string);
+  const { data: redeemList, isLoading: isLoadingList } = useRedeemList(eventSlug as string);
+  
+  // Get event data to determine redeem strategy
+  const { data: event, isLoading: eventLoading } = useEventBySlug(eventSlug as string);
 
   // Find the last redeemed wristband (memoized for performance)
   const lastRedeemedWristband = useMemo(() => {
@@ -35,53 +42,87 @@ export default function RedeemPage() {
     );
   }, [lastRedeemedTicket, redeemList?.data]);
 
+  // Get redeem strategy and item labels
+  const redeemStrategy = event?.redeemStrategy || RedeemStrategy.WRISTBAND;
+  const getItemLabel = () => {
+    switch (redeemStrategy) {
+      case RedeemStrategy.WRISTBAND:
+        return 'Wristband';
+      case RedeemStrategy.BIB:
+        return 'BIB Number';
+      case RedeemStrategy.NONE:
+        return 'Confirmation';
+      default:
+        return 'Item';
+    }
+  };
+
+  const requiresItemCode = redeemStrategy !== RedeemStrategy.NONE;
+
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setSuccessMessage('');
     setErrorMessage('');
 
-    if (!ticketCode.trim() || !wristbandCode.trim()) {
-      setErrorMessage('Mohon isi ticket code dan wristband code');
+    if (!ticketCode.trim()) {
+      setErrorMessage('Mohon isi ticket code');
+      return;
+    }
+
+    if (requiresItemCode && !itemCode.trim()) {
+      setErrorMessage(`Mohon isi ${getItemLabel().toLowerCase()} code`);
+      return;
+    }
+
+    if (!event?.id) {
+      setErrorMessage('Event data belum dimuat. Mohon tunggu sebentar.');
       return;
     }
 
     try {
       const result = await redeemMutation.mutateAsync({
         ticketCode: ticketCode.trim(),
-        wristbandCode: wristbandCode.trim(),
+        // wristbandCode: requiresItemCode ? itemCode.trim() : undefined, // Legacy compatibility
+        itemCode: requiresItemCode ? itemCode.trim() : undefined,
+        eventId: event.id, // Now guaranteed to be string, not undefined
+        redeemStrategy,
       });
 
-      setSuccessMessage(`Berhasil! Ticket ${result.ticketCode} telah ditukar dengan wristband ${result.wristbandCode}`);
+      const itemLabel = getItemLabel().toLowerCase();
+      const successMsg = requiresItemCode 
+        ? `Berhasil! Ticket ${result.ticketCode} telah ditukar dengan ${itemLabel} ${result.wristbandCode || result.itemCode}`
+        : `Berhasil! Ticket ${result.ticketCode} telah dikonfirmasi untuk redeem`;
+      
+      setSuccessMessage(successMsg);
       setLastRedeemedTicket(result.ticketCode);
       setTicketCode('');
-      setWristbandCode('');
+      setItemCode('');
     } catch (error: any) {
-      setErrorMessage(error.message || 'Terjadi kesalahan saat redeem ticket');
+      setErrorMessage(error.message || 'Terjadi kesalahan saat redeem');
     }
-  }, [ticketCode, wristbandCode, redeemMutation]);
+  }, [ticketCode, itemCode, redeemMutation, event?.id, redeemStrategy, requiresItemCode]);
 
   const handleScanTicket = () => {
     setScanningFor('ticket');
     setScannerOpen(true);
   };
 
-  const handleScanWristband = () => {
-    setScanningFor('wristband');
+  const handleScanItem = () => {
+    setScanningFor('item');
     setScannerOpen(true);
   };
 
-  const handleTicketCodeChange = useCallback((value: string) => {
-    setTicketCode(value);
-    // Clear previous redeemed info when user starts typing new ticket code
+  const handleItemCodeChange = useCallback((value: string) => {
+    setItemCode(value);
+    // Clear previous redeemed info when user starts typing new item code
     if (value && lastRedeemedTicket) {
       setLastRedeemedTicket('');
       setSuccessMessage('');
     }
   }, [lastRedeemedTicket]);
 
-  const handleWristbandCodeChange = useCallback((value: string) => {
-    setWristbandCode(value);
-    // Clear previous redeemed info when user starts typing new wristband code
+  const handleTicketCodeChange = useCallback((value: string) => {
+    setTicketCode(value);
     if (value && lastRedeemedTicket) {
       setLastRedeemedTicket('');
       setSuccessMessage('');
@@ -91,19 +132,11 @@ export default function RedeemPage() {
   const handleScanResult = useCallback((decodedText: string) => {
     if (scanningFor === 'ticket') {
       setTicketCode(decodedText);
-      if (decodedText && lastRedeemedTicket) {
-        setLastRedeemedTicket('');
-        setSuccessMessage('');
-      }
     } else {
-      setWristbandCode(decodedText);
-      if (decodedText && lastRedeemedTicket) {
-        setLastRedeemedTicket('');
-        setSuccessMessage('');
-      }
+      setItemCode(decodedText);
     }
     setScannerOpen(false);
-  }, [scanningFor, lastRedeemedTicket]);
+  }, [scanningFor]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -153,33 +186,35 @@ export default function RedeemPage() {
                 </div>
               </div>
 
-              {/* Wristband Code Input */}
-              <div>
-                <label htmlFor="wristbandCode" className="block text-sm font-medium text-gray-700 mb-2">
-                  Wristband Code
+              {/* Dynamic Item Code Input */}
+              {requiresItemCode && (
+                <div>
+                  <label htmlFor="itemCode" className="block text-sm font-medium text-gray-700 mb-2">
+                    {getItemLabel()} Code
                 </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      id="wristbandCode"
-                      value={wristbandCode}
-                      onChange={(e) => handleWristbandCodeChange(e.target.value)}
-                      placeholder="Masukkan wristband code"
-                      className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    />
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <QrCode className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="text"
+                        id="itemCode"
+                        value={itemCode}
+                        onChange={(e) => handleItemCodeChange(e.target.value)}
+                        placeholder={`Masukkan ${getItemLabel().toLowerCase()} code`}
+                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleScanItem}
+                      className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                      title="Scan QR Code"
+                    >
+                      <Scan className="w-5 h-5" />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleScanWristband}
-                    className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
-                    title="Scan QR Code"
-                  >
-                    <Scan className="w-5 h-5" />
-                  </button>
                 </div>
-              </div>
+              )}
 
               {/* Success Message */}
               {successMessage && (
@@ -339,7 +374,7 @@ export default function RedeemPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={redeemMutation.isPending}
+                disabled={redeemMutation.isPending || eventLoading || !event?.id}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
               >
                 {redeemMutation.isPending ? (
@@ -512,7 +547,7 @@ export default function RedeemPage() {
         isOpen={scannerOpen}
         onScan={handleScanResult}
         onClose={() => setScannerOpen(false)}
-        label={scanningFor === 'ticket' ? 'Scan Ticket QR Code' : 'Scan Wristband QR Code'}
+        label={scanningFor === 'ticket' ? 'Scan Ticket QR Code' : `Scan ${getItemLabel()} QR Code`}
       />
     </div>
   );

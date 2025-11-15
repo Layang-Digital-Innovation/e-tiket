@@ -210,15 +210,20 @@ class ApiService {
   async getProfile() {
     console.log('🌐 API Service: Calling /api/auth/profile...');
     const response = await this.request<ApiResponse<User>>('/api/auth/profile');
-    console.log('📥 API Service: Profile response received:', response);
     return response;
   }
 
   // Redeem API
-  async redeemTicket(redeemData: RedeemRequest): Promise<RedeemResponse> {
+  async redeemTicket(data: { 
+    ticketCode: string; 
+    wristbandCode?: string; 
+    itemCode?: string;
+    eventId?: string;
+    redeemStrategy?: string;
+  }): Promise<RedeemResponse> {
     return this.request<RedeemResponse>('/api/redeem', {
       method: 'POST',
-      data: redeemData,
+      data,
     });
   }
 
@@ -230,8 +235,19 @@ class ApiService {
     return this.request<ApiResponse<Wristband>>(`/api/redeem/${id}`);
   }
 
+  async generateRedeemItems(payload: { ticketCategoryId: string; quantity: number }): Promise<{ itemsGenerated: number } & any> {
+    return this.request(`/api/redeem/generate-items`, {
+      method: 'POST',
+      data: payload,
+    });
+  }
+
   // Check-in API
-  async checkIn(checkInData: { wristbandCode: string }): Promise<CheckInResponse> {
+  async checkIn(checkInData: { 
+    wristbandCode?: string; // Legacy compatibility
+    itemCode?: string; // For WRISTBAND/BIB strategies
+    ticketCode?: string; // For NONE strategy
+  }): Promise<CheckInResponse> {
     return this.request<CheckInResponse>('/api/check-in', {
       method: 'POST',
       data: checkInData,
@@ -242,8 +258,12 @@ class ApiService {
     return this.request<ApiResponse<Wristband[]>>('/api/check-in/event/' + eventId);
   }
 
-  async getCheckInListByEvent(eventId: string): Promise<ApiResponse<Wristband[]>> {
-    return this.request<ApiResponse<Wristband[]>>('/api/check-in/event/' + eventId);
+  async getCheckInListByEvent(eventId: string): Promise<ApiResponse<any[]>> {
+    return this.request<ApiResponse<any[]>>(`/api/check-in/event/${eventId}`);
+  }
+
+  async getCheckInListByEventSlug(eventSlug: string): Promise<ApiResponse<any[]>> {
+    return this.request<ApiResponse<any[]>>(`/api/check-in/event-slug/${eventSlug}`);
   }
 
 
@@ -338,6 +358,114 @@ class ApiService {
     return this.request<Payout>(`/api/payouts/${payoutId}/cancel`, {
       method: 'PATCH',
     });
+  }
+
+  // Attendees API (slug-based)
+  async getAttendeesByEventSlug(eventSlug: string, status?: string): Promise<ApiResponse<any[]>> {
+    const searchParams = new URLSearchParams();
+    if (status) searchParams.append('status', status);
+    const query = searchParams.toString();
+    return this.request<ApiResponse<any[]>>(`/api/attendees/event/${eventSlug}${query ? `?${query}` : ''}`);
+  }
+
+  async exportAttendeesBySlug(eventSlug: string, status?: string): Promise<void> {
+    const searchParams = new URLSearchParams();
+    if (status) searchParams.append('status', status);
+    const query = searchParams.toString();
+    
+    const url = `${this.baseURL}/api/attendees/event/${eventSlug}/export${query ? `?${query}` : ''}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'text/csv',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      // Get filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `attendees-${eventSlug}.csv`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Export attendees failed:', error);
+      throw error;
+    }
+  }
+
+  // Backward compatibility methods (deprecated)
+  async getAttendeesByEvent(eventId: string, status?: string): Promise<ApiResponse<any[]>> {
+    const searchParams = new URLSearchParams();
+    if (status) searchParams.append('status', status);
+    const query = searchParams.toString();
+    return this.request<ApiResponse<any[]>>(`/api/attendees/event-id/${eventId}${query ? `?${query}` : ''}`);
+  }
+
+  async exportAttendees(eventId: string, status?: string): Promise<void> {
+    const searchParams = new URLSearchParams();
+    if (status) searchParams.append('status', status);
+    const query = searchParams.toString();
+    
+    const url = `${this.baseURL}/api/attendees/event-id/${eventId}/export${query ? `?${query}` : ''}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'text/csv',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      // Get filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `attendees-${eventId}.csv`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Export attendees failed:', error);
+      throw error;
+    }
   }
 }
 

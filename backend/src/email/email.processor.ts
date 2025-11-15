@@ -61,4 +61,29 @@ export class EmailProcessor {
       throw error; // This will mark the job as failed and retry
     }
   }
+
+  @Process('send-webinar-access-email')
+  async handleWebinarAccessEmail(job: Job<EmailJobData>) {
+    this.logger.log(`Processing webinar access email job ${job.id}`);
+
+    try {
+      const { to, attendeeName, eventTitle, startAt, endAt, timezone, webinarJoinUrl, webinarNotes } = job.data.data;
+
+      await this.emailService.sendWebinarAccessEmail({
+        to,
+        attendeeName,
+        eventTitle,
+        startAt,
+        endAt,
+        timezone,
+        webinarJoinUrl,
+        webinarNotes,
+      });
+
+      this.logger.log(`Successfully sent webinar access email to ${to}`);
+    } catch (error) {
+      this.logger.error(`Failed to send webinar access email for job ${job.id}`, error);
+      throw error;
+    }
+  }
 }

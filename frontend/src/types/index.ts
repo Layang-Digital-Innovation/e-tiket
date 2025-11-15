@@ -46,6 +46,8 @@ export interface Event {
   startDate: string;
   endDate: string;
   location: string;
+  eventType?: EventType;
+  redeemStrategy?: RedeemStrategy;
   imageUrl?: string;
   basePrice?: number;
   termsAndConditions?: string;
@@ -57,6 +59,20 @@ export interface Event {
   createdAt: string;
   updatedAt: string;
 }
+
+// Event type and redeem strategy enums (frontend)
+export enum EventType {
+  CONCERT = 'CONCERT',
+  RUNNING = 'RUNNING',
+  SEMINAR = 'SEMINAR',
+}
+
+export enum RedeemStrategy {
+  WRISTBAND = 'WRISTBAND',
+  BIB = 'BIB',
+  NONE = 'NONE',
+}
+
 
 // Ticket Category Types
 export interface TicketCategory {
@@ -225,7 +241,10 @@ export interface CheckoutState {
 // Redeem Types
 export interface RedeemRequest {
   ticketCode: string;
-  wristbandCode: string;
+  wristbandCode?: string; // Legacy compatibility
+  itemCode?: string;
+  eventId?: string;
+  redeemStrategy?: string;
 }
 
 // Attendee Types
@@ -239,7 +258,20 @@ export interface Attendee {
   gender?: string;
   address?: string;
   birthDate?: string;
-  // Removed ticket and orderItem to prevent circular references
+  ticket?: {
+    ticketCode: string;
+    status: string;
+    category?: {
+      id: string;
+      name: string;
+      eventId: string;
+    };
+  };
+  orderItem?: {
+    id: string;
+    quantity: number;
+    price: number;
+  };
 }
 
 export interface RedeemResponse {
@@ -250,12 +282,15 @@ export interface RedeemResponse {
 
 // Check-in Types
 export interface CheckInRequest {
-  wristbandCode: string;
+  wristbandCode?: string; // Legacy compatibility
+  itemCode?: string; // For WRISTBAND/BIB strategies
+  ticketCode?: string; // For NONE strategy
 }
 
 export interface CheckInResponse {
   message: string;
-  wristbandCode: string;
+  wristbandCode?: string; // Legacy compatibility
+  itemCode?: string; // For WRISTBAND/BIB strategies
   ticketCode: string;
   checkedInAt: string;
 }

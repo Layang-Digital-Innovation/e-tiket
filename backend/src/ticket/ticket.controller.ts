@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { TicketService } from './ticket.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
@@ -20,9 +21,22 @@ export class TicketController {
     return this.ticketService.create(createTicketDto);
   }
 
+  @Post('test/generate')
+  async generateTestTickets(
+    @Query('categoryId') categoryId: string,
+    @Query('quantity') quantity: string = '10'
+  ) {
+    return this.ticketService.generateTestTickets(categoryId, parseInt(quantity));
+  }
+
   @Get()
   findAll() {
     return this.ticketService.findAll();
+  }
+
+  @Get('event/:eventId')
+  findByEvent(@Param('eventId') eventId: string) {
+    return this.ticketService.findUnusedTicketsByEvent(eventId);
   }
 
   @Get(':id')

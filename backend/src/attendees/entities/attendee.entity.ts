@@ -1,8 +1,9 @@
 import { OrderItem } from "src/order_item/entities/order_item.entity";
 import { Ticket } from "src/ticket/entities/ticket.entity";
+import { Event } from "src/events/entities/event.entity";
 import { Column, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 
-@Entity("atendees")
+@Entity("attendees")
 export class Attendee {
    @PrimaryGeneratedColumn('uuid')
   id: string;

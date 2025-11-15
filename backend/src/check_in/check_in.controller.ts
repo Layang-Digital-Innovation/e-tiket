@@ -27,14 +27,16 @@ export class CheckInController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.ADMIN, UserRole.EVENT_ORGANIZER)
     async checkIn(@Body() checkInDto: CheckInDto, @Request() req) {
-        // Verify organizer can only check-in for their own events
-        const wristband = await this.checkInService.getWristbandWithEvent(checkInDto.wristbandCode);
-        
-        if (req.user.role !== UserRole.ADMIN && wristband.event.organizer.id !== req.user.id) {
-            throw new ForbiddenException('You can only check-in wristbands for your own events');
+        // For wristband check-in, verify organizer authorization
+        if (checkInDto.wristbandCode) {
+            const wristband = await this.checkInService.getWristbandWithEvent(checkInDto.wristbandCode);
+            
+            if (req.user.role !== UserRole.ADMIN && wristband.event.organizer.id !== req.user.id) {
+                throw new ForbiddenException('You can only check-in wristbands for your own events');
+            }
         }
         
-        return this.checkInService.checkInByWristband(checkInDto);
+        return this.checkInService.checkIn(checkInDto);
     }
 
     @Get('event/:eventId')

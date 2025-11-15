@@ -14,6 +14,7 @@ import { TicketService } from 'src/ticket/ticket.service';
 import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
 import { DataSource } from 'typeorm';
 import { EmailQueueService } from 'src/email/email-queue.service';
+import { DeliveryMode } from 'src/events/entities/event.entity';
 import type { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import type { ExpireOrderJobData } from 'src/order/order-expiration.processor';
@@ -269,7 +270,7 @@ if (order.status === OrderStatus.PAID && order.paymentId === callbackData.paymen
         const attendee = item.attendees[i];
         const ticket = queryRunner.manager.create(Ticket, {
           orderItem: item,
-          ticketCategory: category,
+          category,
           order,
           attendee,
         });
@@ -309,6 +310,22 @@ if (order.status === OrderStatus.PAID && order.paymentId === callbackData.paymen
         attendeeIdentityType: ticket.attendee.identityType,
         attendeeIdentityNumber: ticket.attendee.identityNumber,
       });
+    }
+
+    // 5.1️⃣ Enqueue Webinar Access email (Phase 1) for ONLINE events with join URL
+    for (const ticket of allTicketsToSave) {
+      const event = ticket.orderItem.ticketCategory.event;
+      const attendee = ticket.attendee;
+      if (event && event.deliveryMode === DeliveryMode.ONLINE && event.webinarJoinUrl && attendee?.email) {
+        await this.emailQueueService.addWebinarAccessEmail({
+          to: attendee.email,
+          attendeeName: attendee.fullName ?? '',
+          eventTitle: event.title ?? 'Webinar',
+          startAt: event.startDate,
+          endAt: event.endDate,
+          webinarJoinUrl: event.webinarJoinUrl,
+        });
+      }
     }
 
     // 6️⃣ Send order summary email via queue (after transaction)

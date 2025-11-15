@@ -1,34 +1,37 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { ManualIssueOrderDto } from './dto/manual-issue-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Order, OrderStatus } from './entities/order.entity';
 import { DataSource, Repository } from 'typeorm';
 import { EventsValidationService } from 'src/events/validation/validation.service';
-import { TicketCategoriesService } from 'src/ticket_categories/ticket_categories.service';
-import { TicketCategoriesValidationService } from 'src/ticket_categories/validation/validation.service';
 import { InjectQueue } from '@nestjs/bull';
 import { ExpireOrderJobData } from './order-expiration.processor';
 import { OrderItem } from 'src/order_item/entities/order_item.entity';
 import { Attendee } from 'src/attendees/entities/attendee.entity';
 import { PaymentService } from 'src/payment/payment.service';
 import { EventsService } from 'src/events/events.service';
+import { DeliveryMode } from 'src/events/entities/event.entity';
 import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
+import { Ticket } from 'src/ticket/entities/ticket.entity';
 import { ApiResponseDto } from 'src/common/dto/api-response.dto';
 import type { Queue } from 'bull';
+import { EmailService } from 'src/email/email.service';
+import { EmailQueueService } from 'src/email/email-queue.service';
 
 @Injectable()
 export class OrderService {
   constructor(
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
-    private readonly ticketCategoryService: TicketCategoriesService,
-    private readonly ticketCategoryValidationService: TicketCategoriesValidationService,
+    private readonly emailQueueService: EmailQueueService,
     private readonly eventValidationService: EventsValidationService,
     private readonly eventsService: EventsService,
     private readonly paymentService: PaymentService,
@@ -41,6 +44,7 @@ export class OrderService {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
+    let committed = false;
 
     try {
       let totalAmount = 0;
@@ -70,6 +74,8 @@ export class OrderService {
             `Ticket category ${item.categoryId} not found`,
           );
         }
+
+ 
 
         // Check if category is active
         if (!category.isActive) {
@@ -137,7 +143,118 @@ export class OrderService {
 
       Logger.log('SAVED ORDER ', savedOrder);
 
+      // Zero-total branch: auto-confirm, generate tickets, skip invoice/expiration
+      if (totalAmount === 0) {
+        // Reload order with relations needed
+        const orderWithRelations = await queryRunner.manager.findOne(Order, {
+          where: { id: savedOrder.id },
+          relations: [
+            'orderItems',
+            'orderItems.ticketCategory',
+            'orderItems.ticketCategory.event',
+            'orderItems.attendees',
+          ],
+        });
+
+        if (!orderWithRelations) {
+          throw new InternalServerErrorException(`Order ${savedOrder.id} not found after creation`);
+        }
+
+        // Mark order as PAID/confirmed immediately
+        orderWithRelations.status = OrderStatus.PAID;
+        orderWithRelations.paidAt = new Date();
+        await queryRunner.manager.save(orderWithRelations);
+
+        // Move reserved -> sold and generate tickets
+        const ticketsToSave: Ticket[] = [];
+        for (const item of orderWithRelations.orderItems) {
+          const category = await queryRunner.manager.findOne(TicketCategory, {
+            where: { id: item.ticketCategory.id },
+            lock: { mode: 'pessimistic_write' },
+          });
+
+          if (!category) {
+            throw new NotFoundException(`Ticket category ${item.ticketCategory.id} not found`);
+          }
+
+          // release reserved and add to sold
+          category.reserved = Math.max(0, category.reserved - item.quantity);
+          const remaining = category.maxQuantity - category.sold;
+          if (item.quantity > remaining) {
+            throw new BadRequestException(
+              `Not enough tickets available. Remaining: ${remaining}, requested: ${item.quantity}`,
+            );
+          }
+          category.sold += item.quantity;
+          await queryRunner.manager.save(category);
+
+          // Create tickets for each attendee
+          for (let i = 0; i < item.quantity; i++) {
+            const attendee = item.attendees[i];
+            const ticket = queryRunner.manager.create(Ticket, {
+              orderItem: item,
+              category,
+              attendee,
+            });
+            ticketsToSave.push(ticket);
+          }
+        }
+
+        await queryRunner.manager.save(ticketsToSave);
+
+        await queryRunner.commitTransaction();
+        committed = true;
+
+        // Enqueue Webinar Access Emails (background) for ONLINE events
+        for (const ticket of ticketsToSave) {
+          const event = ticket.category.event ?? ticket.orderItem?.ticketCategory?.event;
+          const attendee = ticket.attendee;
+          if (event && event.deliveryMode === DeliveryMode.ONLINE && event.webinarJoinUrl && attendee?.email) {
+            try {
+              await Promise.race([
+                this.emailQueueService.addWebinarAccessEmail({
+                  to: attendee.email,
+                  attendeeName: attendee.fullName ?? '',
+                  eventTitle: event.title ?? 'Webinar',
+                  startAt: event.startDate,
+                  endAt: event.endDate,
+                  webinarJoinUrl: event.webinarJoinUrl,
+                }),
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Email queue timeout')), 5000)
+                )
+              ]);
+            } catch (emailError) {
+              Logger.warn(`Failed to queue webinar access email for ${attendee.email}:`, emailError);
+              // Continue processing even if email queuing fails
+            }
+          }
+        }
+
+        // Return final order without payment URL
+        const finalOrder = await this.orderRepository.findOne({
+          where: { id: savedOrder.id },
+          relations: [
+            'orderItems',
+            'orderItems.ticketCategory',
+            'orderItems.attendees',
+            'orderItems.tickets',
+            'orderItems.tickets.attendee',
+          ],
+        });
+
+        if (!finalOrder) {
+          throw new InternalServerErrorException(`Order ${savedOrder.id} not found after creation`);
+        }
+
+        return {
+          ...finalOrder,
+        };
+      }
+
+      // Non-zero total: proceed with existing flow
       await queryRunner.commitTransaction();
+      committed = true;
 
       // Create invoice AFTER transaction commit to avoid blocking on external API
       let invoice;
@@ -198,12 +315,179 @@ export class OrderService {
         ],
       });
 
+      if (!finalOrder) {
+        throw new InternalServerErrorException(`Order ${savedOrder.id} not found after creation`);
+      }
+
       return {
         ...finalOrder,
         paymentUrl: invoice?.invoice_url || null,
       };
     } catch (error) {
-      await queryRunner.rollbackTransaction();
+      if (!committed) {
+        await queryRunner.rollbackTransaction();
+      }
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+   /**
+   * Manually issue tickets (bypass payment) for EO use-cases
+   * - Validates capacity with pessimistic lock
+   * - Creates PAID order (paymentMethod: OFFLINE)
+   * - Generates tickets immediately
+   * - Enqueues webinar emails after commit
+   */
+  async manualIssue(dto: ManualIssueOrderDto) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    let committed = false;
+
+    try {
+      let totalAmount = 0;
+
+      const order = queryRunner.manager.create(Order, {
+        fullName: dto.buyerFullName,
+        email: dto.buyerEmail,
+        phoneNumber: dto.buyerPhoneNumber,
+        identityType: dto.buyerIdentityType,
+        identityNumber: dto.buyerIdentityNumber,
+        status: OrderStatus.PAID,
+        totalAmount: 0,
+        paymentMethod: 'OFFLINE',
+        paidAt: new Date(),
+        orderItems: [],
+      });
+
+      const savedOrder = await queryRunner.manager.save(order);
+
+      for (const item of dto.items) {
+        const category = await queryRunner.manager.findOne(TicketCategory, {
+          where: { id: item.categoryId },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!category) {
+          throw new NotFoundException(`Ticket category ${item.categoryId} not found`);
+        }
+
+        if (!category.isActive) {
+          throw new BadRequestException(`Ticket category ${category.name} is not active`);
+        }
+
+        // Remaining stock without considering reserved (no reservation step here)
+        const remaining = category.maxQuantity - category.sold;
+        if (remaining < item.quantity) {
+          throw new BadRequestException(`Not enough tickets available for ${category.name}. Remaining: ${remaining}, Requested: ${item.quantity}`);
+        }
+
+        await this.eventValidationService.validateEventId(category.eventId);
+
+        const subtotal = Number(category.price) * item.quantity;
+        totalAmount += subtotal;
+
+        const orderItem = queryRunner.manager.create(OrderItem, {
+          order: savedOrder,
+          ticketCategory: category,
+          quantity: item.quantity,
+          unitPrice: category.price,
+          subtotal,
+        });
+        await queryRunner.manager.save(orderItem);
+
+        if (!item.detailAtendee || item.detailAtendee.length !== item.quantity) {
+          throw new BadRequestException('Jumlah attendee harus sesuai quantity');
+        }
+
+        const attendeesToSave = item.detailAtendee.map(att =>
+          queryRunner.manager.create(Attendee, {
+            orderItem,
+            fullName: att.fullName,
+            email: att.email,
+            phoneNumber: att.phoneNumber,
+            identityType: att.identityType,
+            identityNumber: att.identityNumber,
+            gender: att.gender,
+            address: att.address,
+            birthDate: att.birthDate ? new Date(att.birthDate) : undefined,
+          })
+        );
+        await queryRunner.manager.save(attendeesToSave);
+
+        // Increase sold and generate tickets
+        category.sold += item.quantity;
+        await queryRunner.manager.save(category);
+
+        const ticketsToSave: Ticket[] = [];
+        for (let i = 0; i < item.quantity; i++) {
+          const attendee = attendeesToSave[i];
+          const ticket = queryRunner.manager.create(Ticket, {
+            orderItem,
+            category,
+            attendee,
+          });
+          ticketsToSave.push(ticket);
+        }
+        await queryRunner.manager.save(ticketsToSave);
+
+        savedOrder.orderItems.push(orderItem);
+      }
+
+      savedOrder.totalAmount = totalAmount;
+      await queryRunner.manager.save(savedOrder);
+
+      await queryRunner.commitTransaction();
+      committed = true;
+
+      // Load relations for email content
+      const finalOrder = await this.orderRepository.findOne({
+        where: { id: savedOrder.id },
+        relations: [
+          'orderItems',
+          'orderItems.ticketCategory',
+          'orderItems.ticketCategory.event',
+          'orderItems.attendees',
+          'orderItems.tickets',
+          'orderItems.tickets.attendee',
+        ],
+      });
+
+      if (!finalOrder) {
+        throw new InternalServerErrorException(`Order ${savedOrder.id} not found after creation`);
+      }
+
+      // Enqueue webinar access emails per ticket attendee
+      for (const item of finalOrder.orderItems) {
+        const event = item.ticketCategory.event as any;
+        if (event && event.deliveryMode === DeliveryMode.ONLINE && event.webinarJoinUrl) {
+          for (const t of item.tickets) {
+            const attendee = t.attendee;
+            if (attendee?.email) {
+              try {
+                await this.emailQueueService.addWebinarAccessEmail({
+                  to: attendee.email,
+                  attendeeName: attendee.fullName ?? '',
+                  eventTitle: event.title ?? 'Webinar',
+                  startAt: event.startDate,
+                  endAt: event.endDate,
+                  webinarJoinUrl: event.webinarJoinUrl,
+                });
+              } catch (e) {
+                Logger.warn(`Failed to queue webinar access email for ${attendee.email}: ${e?.message || e}`);
+              }
+            }
+          }
+        }
+      }
+
+      return { ...finalOrder, paymentUrl: null };
+    } catch (error) {
+      if (!committed) {
+        await queryRunner.rollbackTransaction();
+      }
       throw error;
     } finally {
       await queryRunner.release();
@@ -278,6 +562,7 @@ export class OrderService {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
+    let committed = false;
 
     try {
       // Find order with relations
@@ -322,11 +607,14 @@ export class OrderService {
       await queryRunner.manager.save(order);
 
       await queryRunner.commitTransaction();
+      committed = true;
 
       Logger.log(`Successfully expired order ${orderId} and released ${order.orderItems.reduce((sum, item) => sum + item.quantity, 0)} reserved tickets`);
 
     } catch (error) {
-      await queryRunner.rollbackTransaction();
+      if (!committed) {
+        await queryRunner.rollbackTransaction();
+      }
       Logger.error(`Failed to expire order ${orderId}:`, error);
       throw error;
     } finally {

@@ -49,3 +49,17 @@ export function useRedeemById(id: string) {
     enabled: !!id,
   });
 }
+
+export function useGenerateRedeemItems() {
+  const queryClient = useQueryClient();
+  return useMutation<{ itemsGenerated: number } & any, Error, { ticketCategoryId: string; quantity: number }>({
+    mutationFn: async (data) => apiService.generateRedeemItems(data),
+    onSuccess: (res) => {
+      toast.success(`Berhasil generate ${res.itemsGenerated ?? ''} redeem items`);
+      queryClient.invalidateQueries({ queryKey: ['redeemItems'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal generate redeem items: ${error.message || 'Terjadi kesalahan'}`);
+    },
+  });
+}

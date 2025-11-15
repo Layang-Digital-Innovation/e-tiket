@@ -1,9 +1,15 @@
-
-
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 
 export class CheckInDto {
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    wristbandCode: string;
+    wristbandCode?: string;
+
+    @IsOptional()
+    @IsString()
+    itemCode?: string;
+
+    @IsOptional()
+    @IsString()
+    ticketCode?: string;
 }
