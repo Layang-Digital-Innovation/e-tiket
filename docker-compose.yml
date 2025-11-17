@@ -14,15 +14,6 @@ services:
     networks:
       - dokploy-network
 
-redis:
-  image: redis:alpine
-  container_name: ticketing-redis
-  ports:
-    - "6379:6379"
-  restart: unless-stopped
-  networks:
-    - dokploy-network
-
   backend:
     build:
       context: ./backend
