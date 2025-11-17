@@ -131,8 +131,14 @@ export interface CreateEventRequest {
   endDate: string;
   location: string;
   maxCapacity: number;
-  price: number;
   termsAndConditions?: string;
+  eventType: EventType;
+  redeemStrategy?: RedeemStrategy;
+  deliveryMode: 'online' | 'onsite' | 'hybrid';
+  webinarJoinUrl?: string;
+  basePrice?: number;
+  imageUrl?: string;
+  status?: 'published' | 'draft' | 'cancelled' | 'completed';
 }
 
 export interface CreateTicketRequest {

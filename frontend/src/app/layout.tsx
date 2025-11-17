@@ -18,9 +18,10 @@ const ptSerif = PT_Serif({
 }); 
 
 export const metadata: Metadata = {
-  title: "Event Ticketing System",
-  description: "Platform untuk mengelola dan membeli tiket event",
+  title: "Naik Kelas",
+  description: "Media Pengusaha Muda",
   referrer: "no-referrer",
+  icons : "/favicon.ico",
 };
 
 export default function RootLayout({

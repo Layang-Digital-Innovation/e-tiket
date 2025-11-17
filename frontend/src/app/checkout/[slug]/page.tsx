@@ -95,6 +95,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
 
   // Handle timer expiration
   useEffect(() => {
+   
     if (currentStep === 3 && timeLeft === 0 && timerActive) {
       // Time expired, stop timer and show message
       stopTimer();
@@ -189,6 +190,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
     if (!event || !checkoutSession || isSubmitting) return;
     
     setIsSubmitting(true);
+
+
     
     try {
       // Group attendees by category
@@ -234,7 +237,17 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
       // Clear checkout data
       // clearCheckoutSession();
 
+      const totalPrice = getTotalPrice();
+
+      if(totalPrice === 0){
+        router.push("/payment/success")
+        clearCheckoutSession()
+        return;
+      }
+
       console.log(response);
+
+    
       
       // Set payment URL and proceed to step 3
       setPaymentUrl(response.data.paymentUrl);

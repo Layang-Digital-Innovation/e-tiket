@@ -4,6 +4,12 @@ export enum EventTypeApi {
   SEMINAR = 'SEMINAR',
 }
 
+export enum DeliveryModeApi {
+  ONLINE = 'online',
+  ONSITE = 'onsite',
+  HYBRID = 'hybrid',
+}
+
 export enum RedeemStrategyApi {
   WRISTBAND = 'wristband',
   BIB = 'bib',
@@ -72,8 +78,6 @@ export interface User {
   updatedAt: string;
 }
 
-
-
 export interface LoginResponse {
   user: User;
   token: string;
@@ -88,6 +92,8 @@ export interface CreateEventRequest {
   eventType: EventTypeApi;
   imageUrl?: string;
   termsAndConditions?: string;
+  webinarJoinUrl?: string;
+  deliveryMode?: DeliveryModeApi;
 }
 
 export interface CreateTicketRequest {

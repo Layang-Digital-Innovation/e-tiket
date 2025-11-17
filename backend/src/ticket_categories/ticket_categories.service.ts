@@ -106,18 +106,7 @@ export class TicketCategoriesService {
       this.logger.log(`💰 Updated event basePrice for event ${ticketCategory.eventId}`);
     }
     
-    // Generate additional wristbands jika maxQuantity bertambah
-    if (updateTicketCategoryDto.maxQuantity !== undefined && updateTicketCategoryDto.maxQuantity > oldMaxQuantity) {
-      const additionalWristbands = updateTicketCategoryDto.maxQuantity - oldMaxQuantity;
-      await this.wristbandService.generateWristbandByMaxCapacity(
-        additionalWristbands,
-        ticketCategory.eventId,
-        ticketCategory.id,
-      );
-      this.logger.log(
-        `🪪 Generated ${additionalWristbands} additional wristbands for category ${ticketCategory.id} (total now: ${updateTicketCategoryDto.maxQuantity})`,
-      );
-    }
+ 
     
     return updatedCategory;
   }

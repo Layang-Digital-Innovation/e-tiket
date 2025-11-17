@@ -54,44 +54,10 @@ export default function EOEventDetailPage({ params }: { params: Promise<{ slug: 
   };
 
   const exportAttendanceCsv = async () => {
-    if (!event?.id) return;
+    if (!event?.slug) return;
     try {
-      const res = await (await import('@/services/api')).apiService.getCheckInListByEvent(event.id);
-      const list = (res as any).data as any[];
-
-      const rows = list.map((wb: any, idx: number) => {
-        const ticket = wb.assignedTicket || {};
-        const attendee = ticket.attendee || (ticket.orderItem?.attendees?.[0] ?? {});
-        return {
-          No: (idx + 1).toString(),
-          Nama: attendee.fullName || '',
-          Email: attendee.email || '',
-          Telepon: attendee.phoneNumber || '',
-          TicketCode: ticket.ticketCode || '',
-          Status: wb.status || ticket.status || '',
-          'Waktu Check-in': (wb.checkedInAt || ticket.checkedInAt) ? new Date(wb.checkedInAt || ticket.checkedInAt).toLocaleString('id-ID') : '',
-        };
-      });
-
-      const headers = ['No','Nama','Email','Telepon','TicketCode','Status','Waktu Check-in'];
-      const csv = [
-        '\uFEFF' + headers.join(','),
-        ...rows.map(r => headers.map(h => {
-          const val = (r as any)[h] ?? '';
-          const s = String(val).replace(/"/g, '""');
-          return `"${s}` + `"`;
-        }).join(',')),
-      ].join('\n');
-
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `daftar-hadir-${event.slug}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      const { apiService } = await import('@/services/api');
+      await apiService.exportAttendeesBySlug(event.slug);
     } catch (e: any) {
       console.error('Export attendance failed', e);
       alert(e?.message || 'Gagal mengekspor daftar hadir');

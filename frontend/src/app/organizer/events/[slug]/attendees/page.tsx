@@ -21,13 +21,27 @@ const AttendeesPage = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   
+  const mapStatusForApi = (status: string | undefined): string | undefined => {
+    if (!status || status === 'all') return undefined;
+    switch (status) {
+      case 'UNUSED':
+        return 'unused';
+      case 'REDEEMED':
+        return 'redeemed';
+      case 'CHECKED_IN':
+        return 'checked_in';
+      default:
+        return status.toLowerCase();
+    }
+  };
+  
   // Get event by slug first to get the event ID
   const { data: event, isLoading: eventLoading } = useEventBySlug(slug);
   const eventId = event?.id;
   
   const { data: attendeesData, isLoading, error } = useAttendeesBySlug(
     slug, 
-    selectedStatus !== 'all' ? selectedStatus : undefined
+    mapStatusForApi(selectedStatus)
   );
 
   const exportMutation = useExportAttendees();
@@ -46,7 +60,7 @@ const AttendeesPage = () => {
     
     exportMutation.mutate({
       eventSlug: slug,
-      status: selectedStatus !== 'all' ? selectedStatus : undefined,
+      status: mapStatusForApi(selectedStatus),
     }, {
       onSuccess: () => {
         toast.success('Data attendees berhasil diexport!');

@@ -25,27 +25,27 @@ export default function EventsPage() {
 
   return (
     <PublicLayout>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-background">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-16">
+        <div className="bg-foreground text-white pb-20 pt-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               Temukan Event Terbaik
             </h1>
-            <p className="text-xl text-blue-100 mb-8">
+            <p className="text-xl text-gray-300 mb-8">
               Jelajahi berbagai event menarik dan dapatkan tiket Anda sekarang
             </p>
             
             {/* Search Bar */}
-            <div className="max-w-2xl">
+            <div className="w-full max-w-full md:max-w-2xl">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
                 <input
                   type="text"
                   placeholder="Cari event atau lokasi..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-200 pl-12 pr-4 py-3 sm:py-4 rounded-lg text-white placeholder-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
                 />
               </div>
             </div>
@@ -79,7 +79,7 @@ export default function EventsPage() {
           ) : (
             <>
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                   {filteredEvents.length} Event Tersedia
                 </h2>
               </div>
@@ -104,9 +104,9 @@ function EventPublicCard({ event }: { event: Event }) {
 
   return (
     <Link href={`/events/${event.slug}`}>
-      <div className="bg-white rounded-lg shadow hover:shadow-xl transition-shadow duration-300 overflow-hidden cursor-pointer h-full flex flex-col">
+      <div className="bg-white rounded-lg border border-gray-300 shadow-sm hover:shadow-lg transition-shadow duration-300 overflow-hidden cursor-pointer h-full flex flex-col">
         {/* Event Image */}
-        <div className="h-48 bg-gradient-to-br from-blue-500 to-indigo-600 relative overflow-hidden">
+        <div className="h-48 bg-gradient-to-br from-gray-900 to-gray-700 relative overflow-hidden">
           {event.imageUrl ? (
             <img
               src={event.imageUrl}
@@ -115,11 +115,11 @@ function EventPublicCard({ event }: { event: Event }) {
             />
           ) : (
             <div className="flex items-center justify-center h-full">
-              <Calendar className="h-16 w-16 text-white opacity-50" />
+              <Calendar className="h-16 w-16 text-white opacity-60" />
             </div>
           )}
           <div className="absolute top-4 right-4">
-            <span className="bg-white text-blue-600 px-3 py-1 rounded-full text-sm font-semibold shadow">
+            <span className="bg-gray-900 text-white px-3 py-1 rounded-full text-sm font-semibold shadow border border-gray-900">
               {event.status === 'published' ? 'Tersedia' : 'Draft'}
             </span>
           </div>
@@ -131,13 +131,13 @@ function EventPublicCard({ event }: { event: Event }) {
             {event.title}
           </h3>
           
-          <p className="text-gray-600 text-sm mb-4 line-clamp-2 flex-1">
+          <p className="text-gray-700 text-sm mb-4 line-clamp-2 flex-1">
             {stripHtml(event.description)}
           </p>
 
           <div className="space-y-2">
-            <div className="flex items-center text-sm text-gray-600">
-              <Calendar className="h-4 w-4 mr-2 text-blue-600" />
+            <div className="flex items-center text-sm text-gray-700">
+              <Calendar className="h-4 w-4 mr-2 text-gray-700" />
               <span>
                 {new Date(event.startDate).toLocaleDateString('id-ID', {
                   day: 'numeric',
@@ -148,21 +148,21 @@ function EventPublicCard({ event }: { event: Event }) {
             </div>
 
             <div className="flex items-center text-sm text-gray-600">
-              <MapPin className="h-4 w-4 mr-2 text-blue-600" />
+              <MapPin className="h-4 w-4 mr-2 text-gray-700" />
               <span className="line-clamp-1">{event.location}</span>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-              <div className="text-sm text-gray-600">
+            <div className="flex items-center justify-between pt-4 border-t border-gray-300">
+              <div className="text-sm text-gray-700">
                 Mulai dari
               </div>
-              <div className="text-lg font-bold text-blue-600">
+              <div className="text-lg font-bold text-gray-900">
                 {formatCurrency(event.basePrice || 0)}
               </div>
             </div>
           </div>
 
-          <button className="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+          <button className="mt-4 w-full bg-gray-900 text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition-colors font-semibold">
             Lihat Detail
           </button>
         </div>

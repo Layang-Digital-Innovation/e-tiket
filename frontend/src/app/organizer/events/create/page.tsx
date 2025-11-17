@@ -6,7 +6,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiService } from '@/services/api';
-import { CreateEventRequest, EventTypeApi, RedeemStrategyApi } from '@/types/api';
+import { CreateEventRequest, EventTypeApi, RedeemStrategyApi, DeliveryModeApi } from '@/types/api';
 import {
   Form,
   FormControl,
@@ -45,13 +45,24 @@ const eventFormSchema = z.object({
   endTime: z.string().min(1, 'Waktu selesai wajib diisi'),
   eventType: z.nativeEnum(EventTypeApi, { required_error: 'Jenis event wajib dipilih' }),
   imageUrl: z.string().optional(),
+  deliveryMode: z.nativeEnum(DeliveryModeApi).optional(),
+  webinarJoinUrl: z.string().optional(),
   termsAndConditions: z.string().optional(),
 }).refine(data => {
   const startDateTime = new Date(data.startDate);
   const endDateTime = new Date(data.endDate);
-  return startDateTime < endDateTime;
+  const [startHourStr, startMinuteStr] = data.startTime.split(':');
+  const [endHourStr, endMinuteStr] = data.endTime.split(':');
+  const startTotalMinutes =
+    parseInt(startHourStr, 10) * 60 + (startMinuteStr ? parseInt(startMinuteStr, 10) : 0);
+  const endTotalMinutes =
+    parseInt(endHourStr, 10) * 60 + (endMinuteStr ? parseInt(endMinuteStr, 10) : 0);
+  return (
+    startDateTime <= endDateTime &&
+    (startDateTime < endDateTime || startTotalMinutes <= endTotalMinutes)
+  );
 }, {
-  message: 'Tanggal selesai harus setelah tanggal mulai',
+  message: 'Tanggal selesai harus setelah atau sama dengan tanggal mulai, dan jika sama maka waktu selesai tidak boleh lebih awal dari waktu mulai',
   path: ['endDate'],
 });
 
@@ -70,6 +81,8 @@ export default function CreateEventPage() {
       eventType: EventTypeApi.CONCERT,
       imageUrl: '',
       termsAndConditions: '',
+      webinarJoinUrl: '',
+      deliveryMode: DeliveryModeApi.ONLINE,
     },
   });
 
@@ -98,6 +111,8 @@ export default function CreateEventPage() {
         eventType: values.eventType,
         imageUrl: values.imageUrl || undefined,
         termsAndConditions: values.termsAndConditions || undefined,
+        webinarJoinUrl: values.webinarJoinUrl || undefined,
+        deliveryMode: values.deliveryMode,
       };
 
       await apiService.createEvent(eventData);
@@ -167,6 +182,53 @@ export default function CreateEventPage() {
                         </FormItem>
                       )}
                     />
+
+                    {
+                      form.watch('eventType') === EventTypeApi.SEMINAR && (
+                        <>
+                        <FormField
+                          control={form.control}
+                          name="webinarJoinUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>URL Webinar *</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Masukkan URL webinar" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="deliveryMode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Metode Pelaksanaan</FormLabel>
+                              <FormControl>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Pilih metode pelaksanaan" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Object.values(DeliveryModeApi).map((mode) => (
+                                      <SelectItem key={mode} value={mode}>
+                                        {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        </>
+                      )
+                        
+                      
+                    }
 
                     <FormField
                       control={form.control}

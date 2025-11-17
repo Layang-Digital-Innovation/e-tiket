@@ -11,8 +11,8 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <Header />
-      <NavigationProgress className='bg-violet-300'/>
-      <main className="pt-16">
+      <NavigationProgress className='bg-gray-200! dark:bg-gray-700'/>
+      <main className="pt-0">
         {children}
       </main>
       <Toaster position="top-right" richColors />

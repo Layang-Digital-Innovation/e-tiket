@@ -83,6 +83,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
 
     // Reset checkout store to clean state before creating new session
     reset();
+   
 
     // Create checkout session using Zustand store
     const newCheckoutSession: CheckoutState = {
@@ -135,9 +136,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
       <div className="min-h-screen bg-gray-50">
         {/* Hero Section */}
         <div
-          className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white"
+          className="bg-primary text-white"
           style={event.imageUrl ? {
-            backgroundImage: `linear-gradient(to right, rgba(37,99,235,0.85), rgba(79,70,229,0.85)), url(${event.imageUrl})`,
+            backgroundImage: `url(${event.imageUrl})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
