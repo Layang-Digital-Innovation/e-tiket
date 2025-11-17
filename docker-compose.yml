@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   db:
     image: postgres:15-alpine
@@ -63,3 +65,7 @@ services:
     restart: unless-stopped
     networks:
       - dokploy-network
+
+networks:
+  dokploy-network:
+    driver: bridge
