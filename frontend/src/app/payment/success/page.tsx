@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,16 @@ import PublicLayout from '@/components/layouts/PublicLayout';
 import { useCheckoutStore } from '@/store/checkout.store';
 import { formatCurrency } from '@/lib/utils';
 
+// Wrapper to ensure useSearchParams is under a Suspense boundary
 export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={null}>
+      <PaymentSuccessContent />
+    </Suspense>
+  );
+}
+
+function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { clearCheckoutSession, checkoutSession } = useCheckoutStore();

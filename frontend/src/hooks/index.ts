@@ -16,11 +16,11 @@ export {
 
 // Ticket hooks
 export {
-  useTickets,
-  useCreateTicket,
-  useUpdateTicket,
-  useDeleteTicket,
-  ticketKeys,
+  useTicketCategories,
+  useCreateTicketCategory,
+  useUpdateTicketCategory,
+  useDeleteTicketCategory,
+  ticketCategoryKeys,
 } from './useTickets';
 
 // Purchase hooks

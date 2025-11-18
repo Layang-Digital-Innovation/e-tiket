@@ -25,15 +25,15 @@ export function useCheckIn() {
 }
 
 // Hook untuk get list assigned wristbands (yang bisa di-checkin)
-export function useAssignedWristbands() {
-  return useQuery<Wristband[], Error>({
-    queryKey: ['assignedWristbands'],
-    queryFn: async () => {
-      const response = await apiService.getAssignedWristbands();
-      console.log('🔍 Assigned Wristbands Response:', response);
-      console.log('🔍 Is Array?', Array.isArray(response));
-      // Ensure response is an array
-      return Array.isArray(response) ? response : [];
-    },
-  });
-}
+// export function useAssignedWristbands() {
+//   return useQuery<Wristband[], Error>({
+//     queryKey: ['assignedWristbands'],
+//     queryFn: async () => {
+//       const response = await apiService.getAssignedWristbands();
+//       console.log('🔍 Assigned Wristbands Response:', response);
+//       console.log('🔍 Is Array?', Array.isArray(response));
+//       // Ensure response is an array
+//       return Array.isArray(response) ? response : [];
+//     },
+//   });
+// }

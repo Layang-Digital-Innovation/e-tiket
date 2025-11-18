@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, Suspense } from 'react';
 import AdminSidebar from '../sidebar/AdminSidebar';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '../ui/sidebar';
 import NavigationProgress from '../ui/navigation-progress';
@@ -21,7 +21,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <span className="text-lg font-semibold">Admin Dashboard</span>
             </div>
           </header>
-          <NavigationProgress />
+          <Suspense fallback={null}>
+            <NavigationProgress />
+          </Suspense>
           <main className="flex-1">
             {children}
           </main>

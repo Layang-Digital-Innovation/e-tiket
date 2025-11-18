@@ -1,14 +1,14 @@
 'use client';
 
 import { use, useState, useEffect } from 'react';
-import { useCheckIn, useAssignedWristbands } from '@/hooks/useCheckIn';
+import { useCheckIn } from '@/hooks/useCheckIn';
 import { Watch, CheckCircle, AlertCircle, Loader2, QrCode, Ticket, Clock, Scan, Mail, Phone, User, Calendar, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import dynamic from 'next/dynamic';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Wristband } from '@/types';
+import { Event, EventType, Wristband } from '@/types';
 import { useRouter } from 'next/navigation';
 import apiService from '@/services/api';
 
@@ -21,16 +21,37 @@ const QrScanner = dynamic(() => import('@/components/QrScanner'), {
 export default function CheckInPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId: eventSlug } = use(params); // eventId is actually eventSlug now
   const router = useRouter();
-  const [wristbandCode, setWristbandCode] = useState('');
+  const [codeInput, setCodeInput] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
   const [selectedWristband, setSelectedWristband] = useState<Wristband | null>(null);
   const [eventCheckInData, setEventCheckInData] = useState<Wristband[]>([]);
   const [isLoadingEventData, setIsLoadingEventData] = useState(false);
+  const [eventDetail, setEventDetail] = useState<Event | null>(null);
+  const [isLoadingEventDetail, setIsLoadingEventDetail] = useState(false);
 
   const checkInMutation = useCheckIn();
-  const { data: assignedWristbands = [], isLoading: isLoadingList } = useAssignedWristbands();
+
+  // Fetch event detail (to determine event type & strategy)
+  useEffect(() => {
+    if (!eventSlug) return;
+
+    setIsLoadingEventDetail(true);
+    apiService
+      .getEventBySlug(eventSlug)
+      .then((response: any) => {
+        // getEventBySlug currently returns raw event without ApiResponse wrapper
+        setEventDetail(response as Event);
+      })
+      .catch((error: any) => {
+        console.error('Failed to fetch event detail:', error);
+        setErrorMessage('Gagal memuat detail event');
+      })
+      .finally(() => {
+        setIsLoadingEventDetail(false);
+      });
+  }, [eventSlug]);
 
   // Fetch check-in data for specific event
   useEffect(() => {
@@ -58,20 +79,41 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
     setSuccessMessage('');
     setErrorMessage('');
 
-    if (!wristbandCode.trim()) {
-      setErrorMessage('Mohon isi wristband code');
+    const trimmedCode = codeInput.trim();
+
+    if (!trimmedCode) {
+      setErrorMessage('Mohon isi kode untuk check-in');
       return;
     }
 
+    const isConcertOrRunning =
+      eventDetail?.eventType === EventType.CONCERT || eventDetail?.eventType === EventType.RUNNING;
+    const isSeminar = eventDetail?.eventType === EventType.SEMINAR;
+
     try {
-      const result = await checkInMutation.mutateAsync({
-        wristbandCode: wristbandCode.trim(),
-      });
+      const payload: { itemCode?: string; ticketCode?: string } = {};
+
+      if (isConcertOrRunning) {
+        // For CONCERT & RUNNING, treat input as redeem item code
+        payload.itemCode = trimmedCode;
+      } else if (isSeminar) {
+        // For SEMINAR, treat input as ticket code
+        payload.ticketCode = trimmedCode;
+      } else {
+        // Fallback: keep legacy behavior using wristband/item code
+        payload.itemCode = trimmedCode;
+      }
+
+      const result = await checkInMutation.mutateAsync(payload as any);
 
       setSuccessMessage(
-        `Check-in berhasil! Wristband ${result.wristbandCode} (Ticket: ${result.ticketCode}) telah masuk pada ${format(new Date(result.checkedInAt), 'dd MMM yyyy HH:mm:ss', { locale: id })}`
+        `Check-in berhasil! Ticket: ${result.ticketCode} pada ${format(
+          new Date(result.checkedInAt),
+          'dd MMM yyyy HH:mm:ss',
+          { locale: id }
+        )}`
       );
-      setWristbandCode('');
+      setCodeInput('');
       
       // Refresh event check-in data after successful check-in
       if (eventSlug) {
@@ -91,13 +133,17 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
   };
 
   const handleScanResult = (decodedText: string) => {
-    setWristbandCode(decodedText);
+    setCodeInput(decodedText);
     setScannerOpen(false);
   };
 
-  // Use event-specific data if available, otherwise use all wristbands
-  const wristbandsToDisplay = eventCheckInData.length > 0 ? eventCheckInData : assignedWristbands;
-  const isLoadingData = eventCheckInData.length > 0 ? isLoadingEventData : isLoadingList;
+  const isConcertOrRunning =
+    eventDetail?.eventType === EventType.CONCERT || eventDetail?.eventType === EventType.RUNNING;
+  const isSeminar = eventDetail?.eventType === EventType.SEMINAR;
+
+  // Use event-specific data for listing
+  const wristbandsToDisplay = eventCheckInData;
+  const isLoadingData = isLoadingEventData || isLoadingEventDetail;
 
   // Filter wristbands by status
   const readyToCheckIn = Array.isArray(wristbandsToDisplay) ? wristbandsToDisplay.filter((w) => w.status === 'assigned') : [];
@@ -115,8 +161,12 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
             <ArrowLeft className="w-5 h-5" />
             Kembali
           </button>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Check-in Wristband</h1>
-          <p className="text-gray-600">Scan wristband untuk check-in peserta event</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Check-in Peserta</h1>
+          <p className="text-gray-600">
+            {isConcertOrRunning
+              ? 'Scan kode redeem item (wristband / BIB) untuk check-in peserta'
+              : 'Scan ticket code untuk check-in peserta'}
+          </p>
           {eventSlug && (
             <p className="text-sm text-gray-500 mt-2">
               Event Slug: <span className="font-mono font-semibold">{eventSlug}</span>
@@ -135,20 +185,24 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Wristband Code Input */}
+              {/* Code Input (itemCode or ticketCode depending on event type) */}
               <div>
-                <label htmlFor="wristbandCode" className="block text-sm font-medium text-gray-700 mb-2">
-                  Wristband Code
+                <label htmlFor="checkInCode" className="block text-sm font-medium text-gray-700 mb-2">
+                  {isConcertOrRunning ? 'Redeem Item Code' : 'Ticket Code'}
                 </label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Watch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
-                      id="wristbandCode"
-                      value={wristbandCode}
-                      onChange={(e) => setWristbandCode(e.target.value)}
-                      placeholder="Scan atau masukkan wristband code"
+                      id="checkInCode"
+                      value={codeInput}
+                      onChange={(e) => setCodeInput(e.target.value)}
+                      placeholder={
+                        isConcertOrRunning
+                          ? 'Scan atau masukkan redeem item code'
+                          : 'Scan atau masukkan ticket code'
+                      }
                       className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                       autoFocus
                     />
