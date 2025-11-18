@@ -44,7 +44,7 @@ export default function RedeemPage() {
 
   // Get redeem strategy and item labels
   const redeemStrategy = event?.redeemStrategy || RedeemStrategy.WRISTBAND;
-  const getItemLabel = () => {
+  const getItemLabel = useCallback(() => {
     switch (redeemStrategy) {
       case RedeemStrategy.WRISTBAND:
         return 'Wristband';
@@ -55,7 +55,7 @@ export default function RedeemPage() {
       default:
         return 'Item';
     }
-  };
+  }, [redeemStrategy]);
 
   const requiresItemCode = redeemStrategy !== RedeemStrategy.NONE;
 
@@ -100,7 +100,7 @@ export default function RedeemPage() {
     } catch (error: any) {
       setErrorMessage(error.message || 'Terjadi kesalahan saat redeem');
     }
-  }, [ticketCode, itemCode, redeemMutation, event?.id, redeemStrategy, requiresItemCode]);
+  }, [ticketCode, itemCode, redeemMutation, event?.id, redeemStrategy, requiresItemCode, getItemLabel]);
 
   const handleScanTicket = () => {
     setScanningFor('ticket');

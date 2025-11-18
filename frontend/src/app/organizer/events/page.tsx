@@ -18,7 +18,7 @@ export default function EOEventsPage() {
   const deleteEventMutation = useDeleteEvent();
 
   const events = data?.data || [];
-  const totalPages = data?.totalPages || 1;
+  const totalPages = data?.pagination?.totalPages || 1;
 
   // Handle delete event
   const handleDelete = async (id: string) => {

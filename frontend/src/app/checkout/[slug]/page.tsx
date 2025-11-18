@@ -89,7 +89,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
         router.push(`/events/${slug}`);
       }
     }
-  }, [checkoutSession, slug, clearCheckoutSession, router, attendees.length, event?.ticketCategories, updateAttendees, currentStep, paymentUrl, timerActive, timeLeft]);
+  }, [checkoutSession, slug, clearCheckoutSession, router, attendees.length, event?.ticketCategories, updateAttendees, currentStep, paymentUrl, timerActive, timeLeft, startTimer]);
 
   // Countdown timer for step 3 (moved to global store level)
 
@@ -612,7 +612,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
 
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                         <p className="text-sm text-green-800">
-                          ✅ <strong>Data sudah lengkap!</strong> Klik "Buat Pesanan" untuk melanjutkan pembayaran.
+                          ✅ <strong>Data sudah lengkap!</strong> Klik buat pesanan untuk melanjutkan pembayaran.
                         </p>
                       </div>
                     </div>
@@ -644,7 +644,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                           Instruksi Pembayaran
                         </h3>
                         <div className="space-y-3 text-sm text-gray-600">
-                          <p>1. Klik tombol "Bayar Sekarang" di bawah</p>
+                          <p>1. Klik tombol Bayar Sekarang di bawah</p>
                           <p>2. Anda akan diarahkan ke halaman pembayaran Xendit</p>
                           <p>3. Pilih metode pembayaran yang diinginkan</p>
                           <p>4. Selesaikan pembayaran sebelum waktu habis</p>

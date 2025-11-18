@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Camera, X, AlertCircle } from 'lucide-react';
 
@@ -17,17 +17,19 @@ export default function QrScanner({ onScan, onClose, isOpen, label = 'Scan QR Co
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const qrCodeRegionId = 'qr-reader';
 
-  useEffect(() => {
-    if (isOpen && !isScanning) {
-      startScanner();
+  const stopScanner = useCallback(async () => {
+    if (scannerRef.current && scannerRef.current.isScanning) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current.clear();
+      } catch (err) {
+        console.error('Error stopping scanner:', err);
+      }
     }
+    setIsScanning(false);
+  }, []);
 
-    return () => {
-      stopScanner();
-    };
-  }, [isOpen]);
-
-  const startScanner = async () => {
+  const startScanner = useCallback(async () => {
     try {
       setError('');
       setIsScanning(true);
@@ -72,19 +74,17 @@ export default function QrScanner({ onScan, onClose, isOpen, label = 'Scan QR Co
       setError(err.message || 'Failed to start camera. Please check permissions.');
       setIsScanning(false);
     }
-  };
+  }, [onScan, stopScanner]);
 
-  const stopScanner = async () => {
-    if (scannerRef.current && scannerRef.current.isScanning) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current.clear();
-      } catch (err) {
-        console.error('Error stopping scanner:', err);
-      }
+  useEffect(() => {
+    if (isOpen && !isScanning) {
+      startScanner();
     }
-    setIsScanning(false);
-  };
+
+    return () => {
+      stopScanner();
+    };
+  }, [isOpen, isScanning, startScanner, stopScanner]);
 
   const handleClose = async () => {
     await stopScanner();

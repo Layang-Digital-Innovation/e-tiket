@@ -7,6 +7,7 @@ import { Calendar, MapPin, Ticket, Search, Filter } from 'lucide-react';
 import Link from 'next/link';
 import { formatCurrency } from '@/lib/utils';
 import { Event } from '@/types';
+import Image from 'next/image';
 
 export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,7 +109,9 @@ function EventPublicCard({ event }: { event: Event }) {
         {/* Event Image */}
         <div className="h-48 bg-gradient-to-br from-gray-900 to-gray-700 relative overflow-hidden">
           {event.imageUrl ? (
-            <img
+            <Image
+              width={500}
+              height={500}
               src={event.imageUrl}
               alt={event.title}
               className="w-full h-full object-cover"

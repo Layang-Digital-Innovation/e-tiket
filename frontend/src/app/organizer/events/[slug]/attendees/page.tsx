@@ -112,7 +112,7 @@ const AttendeesPage = () => {
             <div className="text-center">
               <h3 className="text-lg font-medium mb-2">Event tidak ditemukan</h3>
               <p className="text-gray-600 mb-4">
-                Event dengan slug "{slug}" tidak ditemukan atau tidak memiliki akses
+                Event dengan slug &quot;{slug}&quot; tidak ditemukan atau tidak memiliki akses
               </p>
               <Button 
                 onClick={() => router.push('/organizer/attendees')}

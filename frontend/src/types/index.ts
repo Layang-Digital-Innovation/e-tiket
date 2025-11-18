@@ -119,6 +119,7 @@ export interface PaginatedResponse<T> {
     total: number;
     page: number;
     limit: number;
+    totalPages: number;
   };
   statusCode?: number;
 }
@@ -284,6 +285,7 @@ export interface RedeemResponse {
   message: string;
   ticketCode: string;
   wristbandCode: string;
+  itemCode?: string; // For WRISTBAND/BIB strategies
 }
 
 // Check-in Types

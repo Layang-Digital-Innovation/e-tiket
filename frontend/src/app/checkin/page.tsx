@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEvents } from '@/hooks/useEvents';
 import { Loader2, QrCode, ArrowLeft, ChevronRight } from 'lucide-react';
 import { Event } from '@/types';
+import Image from 'next/image';
 
 export default function CheckInPage() {
   const router = useRouter();
@@ -56,9 +57,11 @@ export default function CheckInPage() {
                 {/* Event Image */}
                 {event.imageUrl && (
                   <div className="h-40 bg-gradient-to-br from-blue-400 to-blue-600 overflow-hidden">
-                    <img
+                    <Image
                       src={event.imageUrl}
                       alt={event.title}
+                      width={400}
+                      height={400}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                   </div>
