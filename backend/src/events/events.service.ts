@@ -37,7 +37,7 @@ export class EventsService {
     }
 
     // Generate base slug
-    let baseSlug = slugify(createEventDto.title, {
+    const baseSlug = slugify(createEventDto.title, {
       lower: true,
       strict: true,
       trim: true,
