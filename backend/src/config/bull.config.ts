@@ -9,14 +9,21 @@ export const getBullConfig = (
 
   const host = configService.get('REDIS_HOST', 'localhost');
   const port = configService.get('REDIS_PORT', 6379);
+  const password = configService.get<string | undefined>('REDIS_PASSWORD');
+  const username = configService.get<string | undefined>('REDIS_USERNAME');
 
-  logger.log(`Initializing Bull Redis connection to ${host}:${port}`);
+  logger.log(
+    `Initializing Bull Redis connection to ${host}:${port}${password ? ' (with auth)' : ''}`,
+  );
 
   return {
     redis: {
       host,
       port,
+      ...(password ? { password } : {}),
+      ...(username ? { username } : {}),
     },
+
     defaultJobOptions: {
       attempts: 3,
       backoff: {
