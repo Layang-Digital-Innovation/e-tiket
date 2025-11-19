@@ -4,10 +4,12 @@ import {
   Logger,
   ValidationPipe,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import cookieParser from 'cookie-parser';
+import Redis from 'ioredis';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -18,6 +20,24 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule);
     logger.log('✅ NestFactory created successfully.');
 
+    const configService = app.get(ConfigService);
+    const redisHost = configService.get<string>('REDIS_HOST', 'localhost');
+    const redisPort = configService.get<number>('REDIS_PORT', 6379);
+
+    logger.log(`🔌 Checking Redis connection to ${redisHost}:${redisPort}...`);
+    const redisClient = new Redis({ host: redisHost, port: redisPort });
+
+    try {
+      await redisClient.ping();
+      logger.log('✅ Redis connection successful.');
+    } catch (redisError) {
+      logger.error('❌ Failed to connect to Redis:', redisError as Error);
+    } finally {
+      redisClient.disconnect();
+    }
+
+    const corsOrigin = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+
     // Enable cookie parser
     logger.log('🍪 Enabling cookie parser...');
     app.use(cookieParser());
@@ -25,7 +45,7 @@ async function bootstrap() {
     // Enable CORS for frontend
     logger.log('🌐 Enabling CORS...');
     app.enableCors({
-      origin: ['http://localhost:3000', 'http://localhost:3001'],
+      origin: corsOrigin,
       credentials: true,
     });
 
