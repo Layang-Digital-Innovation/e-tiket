@@ -59,6 +59,7 @@ export class AuthService {
   private setAuthCookie(response: Response, token: string) {
     const isProduction = this.configService.get('NODE_ENV') === 'production';
     const cookieMaxAge = this.configService.get<number>('COOKIE_MAX_AGE') || 7 * 24 * 60 * 60 * 1000; // 7 days default
+    const cookieDomain = this.configService.get<string>('COOKIE_DOMAIN') || undefined;
 
     response.cookie('access_token', token, {
       httpOnly: true,
@@ -66,6 +67,7 @@ export class AuthService {
       sameSite: isProduction ? 'strict' : 'lax',
       maxAge: cookieMaxAge,
       path: '/',
+      domain: cookieDomain,
     });
   }
 
@@ -75,6 +77,7 @@ export class AuthService {
       secure: this.configService.get('NODE_ENV') === 'production',
       sameSite: this.configService.get('NODE_ENV') === 'production' ? 'strict' : 'lax',
       path: '/',
+      domain: this.configService.get<string>('COOKIE_DOMAIN') || undefined,
     });
   }
 
