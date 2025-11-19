@@ -19,7 +19,6 @@ async function bootstrap() {
     logger.log('✅ NestFactory created successfully.');
 
 
-    const corsOrigin = process.env.FRONTEND_URL ?? 'http://localhost:3000';
 
     // Enable cookie parser
     logger.log('🍪 Enabling cookie parser...');
@@ -28,7 +27,7 @@ async function bootstrap() {
     // Enable CORS for frontend
     logger.log('🌐 Enabling CORS...');
     app.enableCors({
-      origin: corsOrigin,
+      origin: ['http://localhost:3000', 'https://naikkellas.com'],
       credentials: true,
     });
 

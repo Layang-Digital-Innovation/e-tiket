@@ -3,8 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const token = searchParams.get('token');
+  const tokenFromQuery = searchParams.get('token');
+  const tokenFromCookie = request.cookies.get('access_token')?.value;
   const error = searchParams.get('error');
+
+  // Prefer token from query if provided, otherwise fall back to cookie set by backend
+  const token = tokenFromQuery || tokenFromCookie;
 
   // Handle OAuth error
   if (error) {
@@ -16,7 +20,7 @@ export async function GET(request: NextRequest) {
 
   // Handle missing token
   if (!token) {
-    console.error('No token received from OAuth callback');
+    console.error('No token received from OAuth callback (neither query param nor cookie)');
     return NextResponse.redirect(
       new URL(`/login?error=${encodeURIComponent('No authentication token received')}`, request.url)
     );

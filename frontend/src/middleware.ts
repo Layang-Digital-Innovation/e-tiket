@@ -19,7 +19,9 @@ function decodeAndValidateToken(token: string): { role: string | null; isValid: 
       }
     }
     
-    return { role: decoded.role || null, isValid: true };
+    // Normalize role to lowercase so it matches frontend role checks
+    const normalizedRole = decoded.role ? String(decoded.role).toLowerCase() : null;
+    return { role: normalizedRole, isValid: true };
   } catch (error) {
     console.error('Failed to decode token:', error);
     return { role: null, isValid: false };
