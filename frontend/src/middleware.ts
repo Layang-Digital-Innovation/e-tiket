@@ -110,11 +110,18 @@ export function middleware(req: NextRequest) {
   }
 
   // 2.6. Fallback: If token exists but not validated yet, still redirect from home to dashboard
-  // This handles cases where token validation might be delayed
-  if (token && !isTokenValid && pathname === '/' && userRole) {
-    const defaultRoute = roleDefaultRoutes[userRole] || '/dashboard';
-    console.log('✅ REDIRECTING FROM HOME (fallback) - Role:', userRole, '→', defaultRoute);
-    return NextResponse.redirect(new URL(defaultRoute, req.url));
+  // This handles cases where token validation might be delayed or role decode failed
+  if (token && pathname === '/') {
+    // Even if token validation failed, if we have a role from cookie, redirect
+    if (userRole) {
+      const defaultRoute = roleDefaultRoutes[userRole] || '/dashboard';
+      console.log('✅ REDIRECTING FROM HOME (fallback with role) - Role:', userRole, '→', defaultRoute);
+      return NextResponse.redirect(new URL(defaultRoute, req.url));
+    }
+    
+    // If no role but token exists, default to /dashboard to prevent being stuck on home
+    console.log('⚠️ REDIRECTING FROM HOME (fallback no role) - Token exists but no role, defaulting to /dashboard');
+    return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
   // 3. Role-based access control for protected routes

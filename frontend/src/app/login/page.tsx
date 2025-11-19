@@ -50,7 +50,9 @@ function LoginPageContent() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/');
+      // Don't redirect to home - let middleware handle it
+      // Instead, redirect to dashboard directly to avoid being stuck on home
+      router.push('/dashboard');
     }
   }, [isAuthenticated, router]);
 
