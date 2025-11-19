@@ -27,7 +27,7 @@ async function bootstrap() {
     // Enable CORS for frontend
     logger.log('🌐 Enabling CORS...');
     app.enableCors({
-      origin: ['http://localhost:3000', 'https://naikkellas.com'],
+      origin: ['https://naikkellas.com'],
       credentials: true,
     });
 

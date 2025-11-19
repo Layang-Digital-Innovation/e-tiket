@@ -85,13 +85,16 @@ export default function AuthSuccessPage() {
   };
 
   const getUserRedirectPath = (role: string): string => {
-    switch (role) {
-      case 'ADMIN':
+    const normalizedRole = role?.toLowerCase();
+    switch (normalizedRole) {
+      case 'admin':
         return '/admin/dashboard';
-      case 'EVENT_ORGANIZER':
-        return '/organizer/dashboard';
+      case 'event_organizer':
+        return '/organizer/events';
+      case 'user':
+        return '/dashboard';
       default:
-        return '/';
+        return '/dashboard';
     }
   };
 

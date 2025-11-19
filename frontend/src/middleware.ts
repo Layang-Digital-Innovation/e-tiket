@@ -99,9 +99,9 @@ export function middleware(req: NextRequest) {
   }
 
   // 2.5. Redirect authenticated users from home page to their role-based route
-  if (token && pathname === '/' && userRole) {
-    const defaultRoute = roleDefaultRoutes[userRole];
-    if (defaultRoute && defaultRoute !== '/') {
+  if (token && isTokenValid && pathname === '/') {
+    const defaultRoute = userRole ? (roleDefaultRoutes[userRole] || '/dashboard') : '/dashboard';
+    if (defaultRoute !== '/') {
       console.log('✅ REDIRECTING FROM HOME - Role:', userRole, '→', defaultRoute);
       return NextResponse.redirect(new URL(defaultRoute, req.url));
     }
