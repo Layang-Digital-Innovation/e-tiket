@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
+      domain: isProduction ? '.naikkellas.com' : undefined,
     });
 
     redirectResponse.cookies.set('userData', JSON.stringify(userData), {
@@ -67,6 +68,7 @@ export async function GET(request: NextRequest) {
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
+      domain: isProduction ? '.naikkellas.com' : undefined,
     });
 
     return redirectResponse;

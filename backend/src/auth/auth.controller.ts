@@ -99,9 +99,9 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(@Request() req, @Res() res: Response) {
-    await this.authService.login(req.user, res);
-    // Redirect to frontend - token is now in cookie
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
+    const result = await this.authService.login(req.user, res);
+    // Redirect to frontend with token as query parameter for cross-domain compatibility
+    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${result.accessToken}`);
   }
 
   @Post('create-admin')

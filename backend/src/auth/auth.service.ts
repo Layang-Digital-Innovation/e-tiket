@@ -45,6 +45,7 @@ export class AuthService {
     this.setAuthCookie(response, accessToken);
 
     return {
+      accessToken,
       user: {
         id: user.id,
         email: user.email,
