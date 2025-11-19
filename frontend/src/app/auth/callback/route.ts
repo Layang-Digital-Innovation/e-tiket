@@ -29,11 +29,14 @@ export async function GET(request: NextRequest) {
   try {
     // Verify token with backend
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    console.log(' Verifying token with backend:', backendUrl);
+    
     const response = await axios.get(`${backendUrl}/api/auth/profile`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+      withCredentials: true,
     });
 
     if (response.status !== 200) {
@@ -42,6 +45,7 @@ export async function GET(request: NextRequest) {
 
     const payload = response.data
     const userData = payload.data
+    console.log(' Token verified, user:', userData.email)
 
     // Create response with redirect
     const redirectResponse = NextResponse.redirect(

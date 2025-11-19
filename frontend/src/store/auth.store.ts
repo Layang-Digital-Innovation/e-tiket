@@ -106,12 +106,27 @@ export const useAuthStore = create<AuthStore>()(
           console.error('Logout error:', error);
           // Even if API call fails, clear local state
         } finally {
-          // Clear cookies manually (client-side)
-          document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
-          document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+          // Clear all cookies - both with and without domain
+          const clearCookie = (name: string, domain?: string) => {
+            const domainStr = domain ? `; domain=${domain}` : '';
+            document.cookie = `${name}=; path=/${domainStr}; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+          };
+
+          // Clear cookies without domain (localhost/dev)
+          clearCookie('access_token');
+          clearCookie('user_role');
+          clearCookie('userData');
+          
+          // Clear cookies with domain (production)
+          clearCookie('access_token', '.naikkellas.com');
+          clearCookie('user_role', '.naikkellas.com');
+          clearCookie('userData', '.naikkellas.com');
+          
+          console.log('🗑️ All cookies cleared');
           
           // Clear local storage
           localStorage.removeItem('auth-storage');
+          console.log('🗑️ Local storage cleared');
           
           // Clear all React Query cache
           const queryClient = getQueryClient();
@@ -125,6 +140,8 @@ export const useAuthStore = create<AuthStore>()(
             error: null,
             tokenExpiry: null,
           });
+          
+          console.log('✅ Logout complete - all data cleared');
         }
       },
 

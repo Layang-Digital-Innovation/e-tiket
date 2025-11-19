@@ -26,8 +26,12 @@ async function bootstrap() {
 
     // Enable CORS for frontend
     logger.log('🌐 Enabling CORS...');
+    const corsOrigins = process.env.NODE_ENV === 'production'
+      ? ['https://naikkellas.com']
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'];
+    
     app.enableCors({
-      origin: ['https://naikkellas.com'],
+      origin: corsOrigins,
       credentials: true,
     });
 
