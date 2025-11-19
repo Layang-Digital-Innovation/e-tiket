@@ -124,6 +124,23 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
+  // 2.7. Ultra fallback: If pathname is '/' and we have userData cookie, redirect to dashboard
+  // This catches cases where token validation completely failed but user data still exists
+  const userDataCookie = req.cookies.get('userData')?.value;
+  if (pathname === '/' && userDataCookie) {
+    try {
+      const userData = JSON.parse(decodeURIComponent(userDataCookie));
+      const role = userData.role ? String(userData.role).toLowerCase() : null;
+      const defaultRoute = role && roleDefaultRoutes[role] ? roleDefaultRoutes[role] : '/dashboard';
+      console.log('✅ REDIRECTING FROM HOME (ultra fallback) - Found userData cookie, role:', role, '→', defaultRoute);
+      return NextResponse.redirect(new URL(defaultRoute, req.url));
+    } catch (error) {
+      console.error('⚠️ Failed to parse userData cookie:', error);
+      console.log('⚠️ REDIRECTING FROM HOME (ultra fallback error) - Defaulting to /dashboard');
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+  }
+
   // 3. Role-based access control for protected routes
   if (token && isProtectedPath && userRole) {
     // Admin can access everything
