@@ -66,8 +66,7 @@ export function middleware(req: NextRequest) {
   const authPaths = ['/login', '/register'];
   const isAuthPath = authPaths.includes(pathname);
 
-  // Debug logging
-  if (process.env.NODE_ENV === 'development') {
+
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🔍 Middleware Check');
     console.log('📍 Path:', pathname);
@@ -76,7 +75,6 @@ export function middleware(req: NextRequest) {
     console.log('✅ Valid:', isTokenValid);
     console.log('👤 Role:', userRole || 'UNKNOWN');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  }
 
   // 1. Redirect to login if accessing protected route without token OR with expired token
   if ((!token || !isTokenValid) && isProtectedPath) {
