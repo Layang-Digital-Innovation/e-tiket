@@ -100,11 +100,21 @@ export function middleware(req: NextRequest) {
 
   // 2.5. Redirect authenticated users from home page to their role-based route
   if (token && isTokenValid && pathname === '/') {
-    const defaultRoute = userRole ? (roleDefaultRoutes[userRole] || '/dashboard') : '/dashboard';
-    if (defaultRoute !== '/') {
-      console.log('✅ REDIRECTING FROM HOME - Role:', userRole, '→', defaultRoute);
-      return NextResponse.redirect(new URL(defaultRoute, req.url));
-    }
+    // If role is available, use role-based route; otherwise default to /dashboard
+    const defaultRoute = userRole && roleDefaultRoutes[userRole] 
+      ? roleDefaultRoutes[userRole] 
+      : '/dashboard';
+    
+    console.log('✅ REDIRECTING FROM HOME - Role:', userRole, '→', defaultRoute);
+    return NextResponse.redirect(new URL(defaultRoute, req.url));
+  }
+
+  // 2.6. Fallback: If token exists but not validated yet, still redirect from home to dashboard
+  // This handles cases where token validation might be delayed
+  if (token && !isTokenValid && pathname === '/' && userRole) {
+    const defaultRoute = roleDefaultRoutes[userRole] || '/dashboard';
+    console.log('✅ REDIRECTING FROM HOME (fallback) - Role:', userRole, '→', defaultRoute);
+    return NextResponse.redirect(new URL(defaultRoute, req.url));
   }
 
   // 3. Role-based access control for protected routes

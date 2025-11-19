@@ -11,8 +11,19 @@ import { TokenExpiryChecker } from './TokenExpiryChecker';
  */
 export function AuthInitializer() {
   const checkAuthStatus = useAuthStore((state) => state.checkAuthStatus);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => {
+    // Quick check: if token exists in cookies but isAuthenticated is false, 
+    // immediately trigger checkAuthStatus to prevent user being stuck on home
+    const hasAccessToken = document.cookie.includes('access_token=');
+    
+    if (hasAccessToken && !isAuthenticated) {
+      console.log('🔄 AuthInitializer: Token found in cookies, checking auth status...');
+    } else if (!hasAccessToken && isAuthenticated) {
+      console.log('⚠️ AuthInitializer: No token in cookies but isAuthenticated is true, clearing state...');
+    }
+    
     // Check authentication status on mount
     console.log('🔄 AuthInitializer: Checking auth status...');
     checkAuthStatus()
@@ -22,7 +33,7 @@ export function AuthInitializer() {
       .catch((error) => {
         console.error('❌ AuthInitializer: Auth check failed:', error);
       });
-  }, [checkAuthStatus]);
+  }, [checkAuthStatus, isAuthenticated]);
 
   return (
     <>
