@@ -41,7 +41,7 @@ import { PayoutModule } from './payout/payout.module';
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_DATABASE'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('NODE_ENV') !== 'production',
+        synchronize: true,
       }),
     }),
     BullModule.forRootAsync({
