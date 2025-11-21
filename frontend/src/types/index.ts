@@ -51,6 +51,8 @@ export interface Event {
   imageUrl?: string;
   basePrice?: number;
   termsAndConditions?: string;
+  webinarJoinUrl?: string;
+  deliveryMode?: DeliveryMode;
   isActive: boolean;
   status?: 'published' | 'draft' | 'cancelled' ;
   organizerId: string;
@@ -73,6 +75,11 @@ export enum RedeemStrategy {
   NONE = 'NONE',
 }
 
+export enum DeliveryMode {
+  ONLINE = 'online',
+  ONSITE = 'onsite',
+  HYBRID = 'hybrid',
+}
 
 // Ticket Category Types
 export interface TicketCategory {
@@ -131,7 +138,6 @@ export interface CreateEventRequest {
   startDate: string;
   endDate: string;
   location: string;
-  maxCapacity: number;
   termsAndConditions?: string;
   eventType: EventType;
   redeemStrategy?: RedeemStrategy;

@@ -99,7 +99,7 @@ export default function NavigationProgress({className}: {className?: string }) {
 
   return (
     <div
-      className="fixed top-14 left-0 right-0 z-50 h-[0.5px] bg-transparent"
+      className="fixed left-0 right-0 z-50 h-[0.5px] bg-transparent"
       style={{ marginLeft: 'var(--sidebar-width, 0px)' }}
     >
       <div

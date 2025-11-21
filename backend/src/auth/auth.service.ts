@@ -6,7 +6,7 @@ import { RegisterDto } from './dto/register.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 import { JwtPayload } from './strategies/jwt.strategy';
-import { EmailService } from '../email/email.service';
+import { EmailService } from '../email/email.service.resend';
 import { Response } from 'express';
 import * as crypto from 'crypto';
 
@@ -106,11 +106,11 @@ export class AuthService {
     const user = await this.usersService.create(userData);
 
     // Send verification email
-    await this.emailService.sendVerificationEmail(
-      user.email,
-      emailVerificationToken,
-      user.firstName,
-    );
+    // await this.emailService.sendVerificationEmail(
+    //   user.email,
+    //   emailVerificationToken,
+    //   user.firstName,
+    // );
 
     return {
       message: 'Registration successful. Please check your email to verify your account.',
@@ -198,7 +198,7 @@ export class AuthService {
     }
 
     // Send welcome email
-    await this.emailService.sendWelcomeEmail(updatedUser.email, updatedUser.firstName);
+    // await this.emailService.sendWelcomeEmail(updatedUser.email, updatedUser.firstName);
 
     // Generate JWT token for auto-login
     const payload: JwtPayload = {

@@ -133,10 +133,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
 
   return (
     <PublicLayout>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 pt-10">
         {/* Hero Section */}
         <div
-          className="bg-primary text-white"
+          className="bg-primary text-white py-20 md:py-0"
           style={event.imageUrl ? {
             backgroundImage: `url(${event.imageUrl})`,
             backgroundSize: 'cover',

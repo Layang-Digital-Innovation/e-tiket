@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { EmailService } from './email.service';
+import { EmailService } from './email.service.resend';
 import { EmailQueueModule } from './email-queue.module';
 
 @Module({

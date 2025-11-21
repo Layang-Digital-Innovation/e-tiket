@@ -30,6 +30,8 @@ import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { error } from 'console';
+import { useCreateEvent } from '@/hooks';
+import { DeliveryMode, EventType } from '@/types';
 
 const eventFormSchema = z.object({
   title: z.string().min(1, 'Judul event wajib diisi'),
@@ -43,9 +45,9 @@ const eventFormSchema = z.object({
   }),
   startTime: z.string().min(1, 'Waktu mulai wajib diisi'),
   endTime: z.string().min(1, 'Waktu selesai wajib diisi'),
-  eventType: z.nativeEnum(EventTypeApi, { required_error: 'Jenis event wajib dipilih' }),
+  eventType: z.nativeEnum(EventType, { required_error: 'Jenis event wajib dipilih' }),
   imageUrl: z.string().optional(),
-  deliveryMode: z.nativeEnum(DeliveryModeApi).optional(),
+  deliveryMode: z.nativeEnum(DeliveryMode),
   webinarJoinUrl: z.string().optional(),
   termsAndConditions: z.string().optional(),
 }).refine(data => {
@@ -78,15 +80,17 @@ export default function CreateEventPage() {
       endDate: new Date(),
       startTime: '08:00',
       endTime: '17:00',
-      eventType: EventTypeApi.CONCERT,
+      eventType: EventType.CONCERT,
       imageUrl: '',
       termsAndConditions: '',
       webinarJoinUrl: '',
-      deliveryMode: DeliveryModeApi.ONLINE,
+      deliveryMode: DeliveryMode.ONLINE,
     },
   });
 
   const isLoading = form.formState.isSubmitting;
+
+  const createEventMutation = useCreateEvent();
 
   const onSubmit = async (values: z.infer<typeof eventFormSchema>) => {
     try {
@@ -112,15 +116,13 @@ export default function CreateEventPage() {
         imageUrl: values.imageUrl || undefined,
         termsAndConditions: values.termsAndConditions || undefined,
         webinarJoinUrl: values.webinarJoinUrl || undefined,
-        deliveryMode: values.deliveryMode,
+        deliveryMode: values.deliveryMode || DeliveryMode.ONLINE,
       };
 
-      await apiService.createEvent(eventData);
-      alert('Event berhasil dibuat!');
+      await createEventMutation.mutateAsync(eventData);
       router.push('/organizer/events');
     } catch (error) {
       console.error('Failed to create event:', error);
-      alert('Gagal membuat event. Silakan coba lagi.');
     }
   };
 
@@ -184,7 +186,7 @@ export default function CreateEventPage() {
                     />
 
                     {
-                      form.watch('eventType') === EventTypeApi.SEMINAR && (
+                      form.watch('eventType') === EventType.SEMINAR && (
                         <>
                         <FormField
                           control={form.control}

@@ -1,3 +1,6 @@
+
+import { DeliveryMode, EventType } from ".";
+
 export enum EventTypeApi {
   CONCERT = 'CONCERT',
   RUNNING = 'RUNNING',
@@ -89,11 +92,11 @@ export interface CreateEventRequest {
   startDate: string;
   endDate: string;
   location: string;
-  eventType: EventTypeApi;
+  eventType: EventType;
   imageUrl?: string;
   termsAndConditions?: string;
   webinarJoinUrl?: string;
-  deliveryMode?: DeliveryModeApi;
+  deliveryMode: DeliveryMode;
 }
 
 export interface CreateTicketRequest {

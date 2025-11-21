@@ -19,7 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { EventType, RedeemStrategy } from '@/types';
+import { EventType, DeliveryMode } from '@/types';
 
 const eventFormSchema = z.object({
   title: z.string().min(1, 'Judul event wajib diisi'),
@@ -36,6 +36,8 @@ const eventFormSchema = z.object({
   eventType: z.nativeEnum(EventType, { required_error: 'Jenis event wajib dipilih' }),
   imageUrl: z.string().optional(),
   termsAndConditions: z.string().optional(),
+  webinarJoinUrl: z.string().url('URL webinar harus valid').optional().or(z.literal('')),
+  deliveryMode: z.nativeEnum(DeliveryMode).optional(),
   status: z.enum(['draft', 'published', 'cancelled']),
 }).refine(data => {
   const startDateTime = new Date(data.startDate);
@@ -65,6 +67,8 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
       eventType: EventType.CONCERT,
       imageUrl: '',
       termsAndConditions: '',
+      webinarJoinUrl: '',
+      deliveryMode: DeliveryMode.ONLINE,
       status: 'draft',
     },
   });
@@ -86,6 +90,8 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
         eventType: ((event as any).eventType as EventType) || EventType.CONCERT,
         imageUrl: event.imageUrl || '',
         termsAndConditions: event.termsAndConditions || '',
+        webinarJoinUrl: (event as any).webinarJoinUrl || '',
+        deliveryMode: ((event as any).deliveryMode as DeliveryMode) || DeliveryMode.ONLINE,
         status: event.status || 'draft',
       });
     }
@@ -119,6 +125,8 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
           eventType: values.eventType,
           imageUrl: values.imageUrl || undefined,
           termsAndConditions: values.termsAndConditions || undefined,
+          webinarJoinUrl: values.webinarJoinUrl || undefined,
+          deliveryMode: values.deliveryMode || undefined,
           status: values.status,
         },
       });
@@ -271,6 +279,51 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
                         </FormControl>
                         <FormDescription>
                           Opsional. Masukkan URL gambar untuk poster event
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="webinarJoinUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL Webinar</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://zoom.us/j/123456789 atau https://meet.google.com/..." {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Opsional. Masukkan link untuk bergabung dengan webinar (Zoom, Google Meet, dll)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="deliveryMode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Metode Pelaksanaan</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Pilih metode pelaksanaan" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.values(DeliveryMode).map((mode) => (
+                              <SelectItem key={mode} value={mode}>
+                                {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Opsional. Pilih metode pelaksanaan event (Online, Onsite, atau Hybrid)
                         </FormDescription>
                         <FormMessage />
                       </FormItem>

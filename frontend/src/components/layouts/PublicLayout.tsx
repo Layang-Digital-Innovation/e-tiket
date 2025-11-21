@@ -12,7 +12,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <Header />
       <Suspense fallback={null}>
-        <NavigationProgress className='bg-gray-200! dark:bg-gray-700'/>
+        <NavigationProgress className='bg-gradient-to-r from-accent to-secondary dark:bg-gray-700'/>
       </Suspense>
       <main className="pt-0">
         {children}

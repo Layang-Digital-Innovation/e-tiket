@@ -211,19 +211,14 @@ export class OrderService {
           const attendee = ticket.attendee;
           if (event && event.deliveryMode === DeliveryMode.ONLINE && event.webinarJoinUrl && attendee?.email) {
             try {
-              await Promise.race([
-                this.emailQueueService.addWebinarAccessEmail({
-                  to: attendee.email,
-                  attendeeName: attendee.fullName ?? '',
-                  eventTitle: event.title ?? 'Webinar',
-                  startAt: event.startDate,
-                  endAt: event.endDate,
-                  webinarJoinUrl: event.webinarJoinUrl,
-                }),
-                new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Email queue timeout')), 5000)
-                )
-              ]);
+              await this.emailQueueService.addWebinarAccessEmail({
+                to: attendee.email,
+                attendeeName: attendee.fullName ?? '',
+                eventTitle: event.title ?? 'Webinar',
+                startAt: event.startDate,
+                endAt: event.endDate,
+                webinarJoinUrl: event.webinarJoinUrl,
+              });
             } catch (emailError) {
               Logger.warn(`Failed to queue webinar access email for ${attendee.email}:`, emailError);
               // Continue processing even if email queuing fails
