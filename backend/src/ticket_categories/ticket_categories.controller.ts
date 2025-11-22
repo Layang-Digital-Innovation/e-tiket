@@ -8,7 +8,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { UserRole } from 'src/users/entities/user.entity';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 
-@Controller('api/ticket-categories')
+@Controller('ticket-categories')
 @AuditController()
 @UseGuards(JwtAuthGuard)
 export class TicketCategoriesController {

@@ -4,8 +4,10 @@ import { UpdateAttendeeDto } from './dto/update-attendee.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Attendee } from './entities/attendee.entity';
 import { Repository, In } from 'typeorm';
-import { Ticket } from 'src/ticket/entities/ticket.entity';
+import { Ticket, TicketStatus } from 'src/ticket/entities/ticket.entity';
 import { TicketService } from 'src/ticket/ticket.service';
+import * as XLSX from "xlsx"
+
 
 @Injectable()
 export class AttendeesService {
@@ -122,6 +124,52 @@ export class AttendeesService {
       throw error;
     }
   }
+
+   async exportXlsxByEventSlug(eventSlug: string, status?: string){
+       try {
+        const rawData = await this.findByEventSlug(eventSlug, status);
+
+
+        const data = rawData.map(attendee => ({
+        'Nama': attendee.fullName || '',
+        'Email': attendee.email || '',
+        'No. Telepon': attendee.phoneNumber || '',
+        'Tiket': attendee.ticket.ticketCode || '',
+        'Kategori Tiket': attendee.ticket.category || '',
+        'Tanggal Daftar': attendee.ticket.createdAt ? new Date(attendee.ticket.createdAt).toLocaleString('id-ID') : '',
+        'Status': attendee.ticket.status == TicketStatus.CHECKED_IN ? "Sudah Check in" : "Tidak Hadir"
+      }));
+
+       const ws = XLSX.utils.json_to_sheet(data);
+      
+      // Atur lebar kolom
+      const wscols = [
+        { wch: 25 }, // Nama
+        { wch: 30 }, // Email
+        { wch: 15 }, // No. Telepon
+        { wch: 20 }, // Tiket
+        { wch: 20 }, // Kategori Tiket
+        { wch: 20 }, // Tanggal Daftar
+        { wch: 15 }, // Status
+      ];
+      ws['!cols'] = wscols;
+
+        // Buat workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Daftar Peserta');
+
+
+
+      // Generate file XLSX
+      const xlsxBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+      
+      return xlsxBuffer;
+
+       } catch (error) {
+         Logger.error('Error exporting XLSX:', error);
+        throw error;
+       }
+   }
 
   // Backward compatibility method
   async exportCsvByEvent(eventId: string, status?: string) {

@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useEventBySlug, useUpdateEvent } from '@/hooks/useEvents';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,21 +80,36 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
       const startDate = new Date(event.startDate);
       const endDate = new Date(event.endDate);
       
-      form.reset({
-        title: event.title || '',
-        description: event.description || '',
-        location: event.location || '',
-        startDate: startDate,
-        endDate: endDate,
-        startTime: startDate.toTimeString().slice(0, 5),
-        endTime: endDate.toTimeString().slice(0, 5),
-        eventType: ((event as any).eventType as EventType) || EventType.CONCERT,
-        imageUrl: event.imageUrl || '',
-        termsAndConditions: event.termsAndConditions || '',
-        webinarJoinUrl: (event as any).webinarJoinUrl || '',
-        deliveryMode: ((event as any).deliveryMode as DeliveryMode) || DeliveryMode.ONLINE,
-        status: event.status || 'draft',
-      });
+      const eventType = (event as any).eventType || EventType.CONCERT;
+      const deliveryMode = (event as any).deliveryMode || DeliveryMode.ONLINE;
+      const status = event.status || 'draft';
+      
+      console.log('Event data:', { eventType, status, deliveryMode });
+      
+      // Reset form dengan delay untuk memastikan state terupdate
+      setTimeout(() => {
+        form.reset({
+          title: event.title || '',
+          description: event.description || '',
+          location: event.location || '',
+          startDate: startDate,
+          endDate: endDate,
+          startTime: startDate.toTimeString().slice(0, 5),
+          endTime: endDate.toTimeString().slice(0, 5),
+          eventType: eventType,
+          imageUrl: event.imageUrl || '',
+          termsAndConditions: event.termsAndConditions || '',
+          webinarJoinUrl: (event as any).webinarJoinUrl || '',
+          deliveryMode: deliveryMode,
+          status: status,
+        });
+        
+        console.log('Form reset completed. Current form values:', {
+          eventType: form.getValues('eventType'),
+          status: form.getValues('status'),
+          deliveryMode: form.getValues('deliveryMode'),
+        });
+      }, 0);
     }
   }, [event, form]);
 
@@ -113,6 +129,12 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
         parseInt(values.endTime.split(':')[1])
       );
 
+      // Validate imageUrl - must be a valid URL or empty
+      let imageUrl = values.imageUrl?.trim();
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        throw new Error('Image URL harus berupa URL yang valid (mulai dengan http:// atau https://)');
+      }
+
       await updateEventMutation.mutateAsync({
         id: event.id,
         slug: slug,
@@ -123,7 +145,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
           startDate: startDateTime.toISOString(),
           endDate: endDateTime.toISOString(),
           eventType: values.eventType,
-          imageUrl: values.imageUrl || undefined,
+          imageUrl: imageUrl || undefined,
           termsAndConditions: values.termsAndConditions || undefined,
           webinarJoinUrl: values.webinarJoinUrl || undefined,
           deliveryMode: values.deliveryMode || undefined,
@@ -273,13 +295,13 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
                     name="imageUrl"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>URL Gambar Event</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://example.com/image.jpg" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Opsional. Masukkan URL gambar untuk poster event
-                        </FormDescription>
+                        <ImageUpload
+                          value={field.value}
+                          onChange={field.onChange}
+                          label="Gambar Event"
+                          description="Upload gambar poster event Anda (JPEG, PNG, WebP, GIF)"
+                          maxSize={5}
+                        />
                         <FormMessage />
                       </FormItem>
                     )}

@@ -4,7 +4,7 @@ import { AttendeesService } from './attendees.service';
 import { CreateAttendeeDto } from './dto/create-attendee.dto';
 import { UpdateAttendeeDto } from './dto/update-attendee.dto';
 
-@Controller('api/attendees')
+@Controller('attendees')
 export class AttendeesController {
   constructor(private readonly attendeesService: AttendeesService) {}
 
@@ -53,10 +53,11 @@ export class AttendeesController {
     @Query('status') status?: string,
   ) {
     try {
-      const csv = await this.attendeesService.exportCsvByEventSlug(eventSlug, status);
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="attendees-${eventSlug}-${new Date().toISOString().split('T')[0]}.csv"`);
-      res.send(csv);
+      const xlsx = await this.attendeesService.exportXlsxByEventSlug(eventSlug, status);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',);
+      res.setHeader('Content-Disposition', `attachment; filename="attendees-${eventSlug}-${new Date().toISOString().split('T')[0]}.xlsx"`);
+      res.send(xlsx);
+      
     } catch (error) {
       res.status(500).json({
         success: false,

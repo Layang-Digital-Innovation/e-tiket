@@ -1,0 +1,184 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: e-tiket-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-e_tiket}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  # Redis (untuk email queue)
+  redis:
+    image: redis:7-alpine
+    container_name: e-tiket-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: e-tiket-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # App Config
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 5000
+      
+      # Database
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-e_tiket}
+      
+      # Redis
+      REDIS_URL: redis://redis:6379
+      
+      # Upload Configuration
+      UPLOAD_PATH: /app/uploads
+      APP_URL: ${APP_URL:-http://localhost:5000}
+      STORAGE_TYPE: local
+      
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-this}
+      JWT_EXPIRATION: 7d
+      
+      # Email (Resend)
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      SMTP_FROM: ${SMTP_FROM:-noreply@yourdomain.com}
+      
+      # Frontend
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      
+      # OAuth (Google)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-http://localhost:5000/api/auth/google/callback}
+      
+      # Payment (Xendit)
+      XENDIT_API_KEY: ${XENDIT_API_KEY}
+      XENDIT_WEBHOOK_TOKEN: ${XENDIT_WEBHOOK_TOKEN}
+      
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    
+    volumes:
+      # Persistent uploads folder
+      - uploads_data:/app/uploads
+      # Optional: logs folder
+      - logs_data:/app/logs
+    
+    ports:
+      - "5000:5000"
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    restart: always
+    
+    # Dokploy labels (optional, untuk Traefik)
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.yourdomain.com`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.backend.loadbalancer.server.port=5000"
+      
+      # Cache static files (uploads)
+      - "traefik.http.middlewares.cache-uploads.headers.customresponseheaders.Cache-Control=public, max-age=2592000"
+      - "traefik.http.routers.backend.middlewares=cache-uploads"
+      
+      # Security headers
+      - "traefik.http.middlewares.security.headers.frameDeny=true"
+      - "traefik.http.middlewares.security.headers.sslRedirect=true"
+      - "traefik.http.middlewares.security.headers.sslHost=api.yourdomain.com"
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}
+    container_name: e-tiket-frontend
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000}
+    
+    ports:
+      - "3000:3000"
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    restart: always
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`yourdomain.com`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+
+volumes:
+  # Database persistence
+  postgres_data:
+    driver: local
+  
+  # Redis persistence
+  redis_data:
+    driver: local
+  
+  # Uploads persistence (IMPORTANT!)
+  uploads_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/uploads  # Change this to your desired path
+  
+  # Logs persistence (optional)
+  logs_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/logs
+
+networks:
+  default:
+    name: e-tiket-network
+    driver: bridge

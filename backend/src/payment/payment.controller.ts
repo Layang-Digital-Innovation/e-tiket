@@ -13,7 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { PaymentService } from './payment.service';
 import { CallbackSuccessDto, XenditPaymentStatus } from 'src/payment/dto/callback-success.dto';
 
-@Controller('api/payment')
+@Controller('payment')
 export class PaymentController {
   private readonly logger = new Logger(PaymentController.name);
 

@@ -23,7 +23,7 @@ import { EventStatus } from './entities/event.entity';
 import { AuditController } from '../common/decorators/audit.decorator';
 import { ResponseMessage } from 'src/common/decorators/response_message.decorator';
 
-@Controller('api/event')
+@Controller('event')
 @AuditController()
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}

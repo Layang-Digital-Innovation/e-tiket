@@ -9,7 +9,7 @@ import { UserRole } from '../users/entities/user.entity';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { User } from '../users/entities/user.entity';
 
-@Controller('api/organizer-dashboard')
+@Controller('organizer-dashboard')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.EVENT_ORGANIZER)
 export class OrganizerDashboardController {

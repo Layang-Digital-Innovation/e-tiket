@@ -13,7 +13,7 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { CallbackSuccessDto } from '../payment/dto/callback-success.dto';
 import { PaymentService } from 'src/payment/payment.service';
 
-@Controller('api/order')
+@Controller('order')
 export class OrderController {
   constructor(
     private readonly orderService: OrderService,

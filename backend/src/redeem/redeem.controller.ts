@@ -9,7 +9,7 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/users/entities/user.entity';
 import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
 
-@Controller('api/redeem')
+@Controller('redeem')
 @AuditController()
 export class RedeemController {
   constructor(private readonly redeemService: RedeemService) {}

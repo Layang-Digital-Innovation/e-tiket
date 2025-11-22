@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Popover,
@@ -255,13 +256,13 @@ export default function CreateEventPage() {
                       name="imageUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>URL Gambar Event</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://example.com/image.jpg" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Opsional. Masukkan URL gambar untuk poster event
-                          </FormDescription>
+                          <ImageUpload
+                            value={field.value}
+                            onChange={field.onChange}
+                            label="Gambar Event"
+                            description="Upload gambar poster event Anda (JPEG, PNG, WebP, GIF)"
+                            maxSize={5}
+                          />
                           <FormMessage />
                         </FormItem>
                       )}

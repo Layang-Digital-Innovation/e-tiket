@@ -24,6 +24,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { OrganizerDashboardModule } from './organizer-dashboard/organizer-dashboard.module';
 import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 import { PayoutModule } from './payout/payout.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { PayoutModule } from './payout/payout.module';
     OrganizerDashboardModule,
     AdminDashboardModule,
     PayoutModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -88,7 +88,7 @@ export class CreateEventDto extends AuditDto {
   @IsOptional()
   basePrice?: number;
 
-  @IsUrl()
+  @IsString()
   @IsOptional()
   imageUrl?: string;
 

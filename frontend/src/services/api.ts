@@ -55,33 +55,33 @@ class ApiService {
     if (params?.status) searchParams.append('status', params.status);
     
     const query = searchParams.toString();
-    return this.request(`/api/event${query ? `?${query}` : ''}`);
+    return this.request(`/event${query ? `?${query}` : ''}`);
   }
 
   async getEvent(id: string) {
-    return this.request(`/api/event/id/${id}`);
+    return this.request(`/event/id/${id}`);
   }
 
   async getEventBySlug(slug: string) {
-    return this.request(`/api/event/${slug}`);
+    return this.request(`/event/${slug}`);
   }
 
   async createEvent(eventData: any) {
-    return this.request('/api/event', {
+    return this.request('/event', {
       method: 'POST',
       data: eventData,
     });
   }
 
   async updateEvent(id: string, eventData: any) {
-    return this.request(`/api/event/id/${id}`, {
+    return this.request(`/event/id/${id}`, {
       method: 'PATCH',
       data: eventData,
     });
   }
 
   async deleteEvent(id: string) {
-    return this.request(`/api/event/id/${id}`, {
+    return this.request(`/event/id/${id}`, {
       method: 'DELETE',
     });
   }
@@ -96,56 +96,56 @@ class ApiService {
     if (params?.limit) searchParams.append('limit', params.limit.toString());
     
     const query = searchParams.toString();
-    return this.request(`/api/event/my-events${query ? `?${query}` : ''}`);
+    return this.request(`/event/my-events${query ? `?${query}` : ''}`);
   }
 
   // Dashboard API
   async getDashboardStats(): Promise<ApiResponse<any>> {
-    return this.request<ApiResponse<any>>('/api/organizer-dashboard/overview');
+    return this.request<ApiResponse<any>>('/organizer-dashboard/overview');
   }
 
   async getSalesChart(days: number = 7): Promise<any> {
-    return this.request<any>(`/api/organizer-dashboard/sales?days=${days}`);
+    return this.request<any>(`/organizer-dashboard/sales?days=${days}`);
   }
 
   async getWeeklyRevenue(weeks: number = 4): Promise<any> {
-    return this.request<any>(`/api/organizer-dashboard/revenue/weekly?weeks=${weeks}`);
+    return this.request<any>(`/organizer-dashboard/revenue/weekly?weeks=${weeks}`);
   }
 
   // Tickets API
   async getTicketsCategoryByEventId(eventId: string) {
-    return this.request(`/api/ticket-categories/event/${eventId}`);
+    return this.request(`/ticket-categories/event/${eventId}`);
   }
 
   async createTicketCategory(ticketData: any) {
-    return this.request('/api/ticket-categories', {
+    return this.request('/ticket-categories', {
       method: 'POST',
       data: ticketData,
     });
   }
 
   async updateTicketCategory(id: string, ticketData: any) {
-    return this.request(`/api/ticket-categories/${id}`, {
+    return this.request(`/ticket-categories/${id}`, {
       method: 'PATCH',
       data: ticketData,
     });
   }
 
   async deleteTicketCategory(id: string) {
-    return this.request(`/api/ticket-categories/${id}`, {
+    return this.request(`/ticket-categories/${id}`, {
       method: 'DELETE',
     });
   }
 
   async toggleTicketCategoryStatus(id: string) {
-    return this.request(`/api/ticket-categories/${id}/toggle-status`, {
+    return this.request(`/ticket-categories/${id}/toggle-status`, {
       method: 'PATCH',
     });
   }
 
   // Orders/Purchases API
   async createOrder(orderData: CreateOrderRequest): Promise<ApiResponse<CreateOrderResponse>> {
-    return this.request<ApiResponse<CreateOrderResponse>>('/api/order', {
+    return this.request<ApiResponse<CreateOrderResponse>>('/order', {
       method: 'POST',
       data: orderData,
     });
@@ -160,15 +160,15 @@ class ApiService {
     if (params?.limit) searchParams.append('limit', params.limit.toString());
     
     const query = searchParams.toString();
-    return this.request(`/api/order${query ? `?${query}` : ''}`);
+    return this.request(`/order${query ? `?${query}` : ''}`);
   }
 
   async getOrder(id: string) {
-    return this.request(`/api/order/${id}`);
+    return this.request(`/order/${id}`);
   }
 
   async getOrderByNumber(orderNumber: string) {
-    return this.request(`/api/order/number/${orderNumber}`);
+    return this.request(`/order/number/${orderNumber}`);
   }
 
   // Legacy - keep for backward compatibility
@@ -182,7 +182,7 @@ class ApiService {
 
   // Auth API
   async login(credentials: { email: string; password: string }) {
-    return this.request('/api/auth/login', {
+    return this.request('/auth/login', {
       method: 'POST',
       data: credentials,
     });
@@ -195,21 +195,21 @@ class ApiService {
     lastName : string;
     phone : string;
   }) {
-    return this.request('/api/auth/register', {
+    return this.request('/auth/register', {
       method: 'POST',
       data: userData,
     });
   }
 
   async logout() {
-    return this.request('/api/auth/logout', {
+    return this.request('/auth/logout', {
       method: 'POST',
     });
   }
 
   async getProfile() {
-    console.log('🌐 API Service: Calling /api/auth/profile...');
-    const response = await this.request<ApiResponse<User>>('/api/auth/profile');
+    console.log('🌐 API Service: Calling /auth/profile...');
+    const response = await this.request<ApiResponse<User>>('/auth/profile');
     return response;
   }
 
@@ -221,22 +221,22 @@ class ApiService {
     eventId?: string;
     redeemStrategy?: string;
   }): Promise<RedeemResponse> {
-    return this.request<RedeemResponse>('/api/redeem', {
+    return this.request<RedeemResponse>('/redeem', {
       method: 'POST',
       data,
     });
   }
 
   async getRedeemList(eventId: string): Promise<ApiResponse<Wristband[]>> {
-    return this.request<ApiResponse<Wristband[]>>('/api/redeem/event/' + eventId);
+    return this.request<ApiResponse<Wristband[]>>('/redeem/event/' + eventId);
   }
 
   async getRedeemById(id: string): Promise<ApiResponse<Wristband>> {
-    return this.request<ApiResponse<Wristband>>(`/api/redeem/${id}`);
+    return this.request<ApiResponse<Wristband>>(`/redeem/${id}`);
   }
 
   async generateRedeemItems(payload: { ticketCategoryId: string; quantity: number }): Promise<{ itemsGenerated: number } & any> {
-    return this.request(`/api/redeem/generate-items`, {
+    return this.request(`/redeem/generate-items`, {
       method: 'POST',
       data: payload,
     });
@@ -248,22 +248,22 @@ class ApiService {
     itemCode?: string; // For WRISTBAND/BIB strategies
     ticketCode?: string; // For NONE strategy
   }): Promise<CheckInResponse> {
-    return this.request<CheckInResponse>('/api/check-in', {
+    return this.request<CheckInResponse>('/check-in', {
       method: 'POST',
       data: checkInData,
     });
   }
 
   async getCheckInList(eventId: string): Promise<ApiResponse<Wristband[]>> {
-    return this.request<ApiResponse<Wristband[]>>('/api/check-in/event/' + eventId);
+    return this.request<ApiResponse<Wristband[]>>('/check-in/event/' + eventId);
   }
 
   async getCheckInListByEvent(eventId: string): Promise<ApiResponse<any[]>> {
-    return this.request<ApiResponse<any[]>>(`/api/check-in/event/${eventId}`);
+    return this.request<ApiResponse<any[]>>(`/check-in/event/${eventId}`);
   }
 
   async getCheckInListByEventSlug(eventSlug: string): Promise<ApiResponse<any[]>> {
-    return this.request<ApiResponse<any[]>>(`/api/check-in/event-slug/${eventSlug}`);
+    return this.request<ApiResponse<any[]>>(`/check-in/event-slug/${eventSlug}`);
   }
 
 
@@ -281,11 +281,11 @@ class ApiService {
     if (params?.search) searchParams.append('search', params.search);
     
     const query = searchParams.toString();
-    return this.request <PaginatedResponse<Event[]>>(`/api/event${query ? `?${query}` : ''}`);
+    return this.request <PaginatedResponse<Event[]>>(`/event${query ? `?${query}` : ''}`);
   }
 
   async getAdminStats() {
-    return this.request('/api/admin-dashboard/stats');
+    return this.request('/admin-dashboard/stats');
   }
 
   async getAllUsers(params?: {
@@ -303,7 +303,7 @@ class ApiService {
     if (params?.search) searchParams.append('search', params.search);
 
     const query = searchParams.toString();
-    return this.request(`/api/admin-dashboard/users${query ? `?${query}` : ''}`);
+    return this.request(`/admin-dashboard/users${query ? `?${query}` : ''}`);
   }
 
   // Payout API
@@ -311,7 +311,7 @@ class ApiService {
     const searchParams = new URLSearchParams();
     if (status) searchParams.append('status', status);
     const query = searchParams.toString();
-    return this.request<PaginatedResponse<Payout[]>>(`/api/payouts/organizer/${organizerId}${query ? `?${query}` : ''}`);
+    return this.request<PaginatedResponse<Payout[]>>(`/payouts/organizer/${organizerId}${query ? `?${query}` : ''}`);
   }
 
   async getAllPayouts(status?: string, organizerId?: string) : Promise<PaginatedResponse<Payout[]>> {
@@ -319,43 +319,43 @@ class ApiService {
     if (status) searchParams.append('status', status);
     if (organizerId) searchParams.append('organizerId', organizerId);
     const query = searchParams.toString();
-    return this.request<PaginatedResponse<Payout[]>>(`/api/payouts${query ? `?${query}` : ''}`);
+    return this.request<PaginatedResponse<Payout[]>>(`/payouts${query ? `?${query}` : ''}`);
   }
 
   async getPayoutDetail(payoutId: string) : Promise<ApiResponse<Payout>> {
-    return this.request<ApiResponse<Payout>>(`/api/payouts/${payoutId}`);
+    return this.request<ApiResponse<Payout>>(`/payouts/${payoutId}`);
   }
 
   async createPayout(payoutData: any): Promise<Payout> {
-    return this.request<Payout>('/api/payouts', {
+    return this.request<Payout>('/payouts', {
       method: 'POST',
       data: payoutData,
     });
   }
 
   async approvePayout(payoutId: string, approveData: any): Promise<Payout> {
-    return this.request<Payout>(`/api/payouts/${payoutId}/approve`, {
+    return this.request<Payout>(`/payouts/${payoutId}/approve`, {
       method: 'PATCH',
       data: approveData,
     });
   }
 
   async rejectPayout(payoutId: string, rejectData: any): Promise<Payout> {
-    return this.request<Payout>(`/api/payouts/${payoutId}/reject`, {
+    return this.request<Payout>(`/payouts/${payoutId}/reject`, {
       method: 'PATCH',
       data: rejectData,
     });
   }
 
   async markPayoutAsPaid(payoutId: string, referenceNumber?: string): Promise<Payout> {
-    return this.request<Payout>(`/api/payouts/${payoutId}/mark-paid`, {
+    return this.request<Payout>(`/payouts/${payoutId}/mark-paid`, {
       method: 'PATCH',
       data: referenceNumber ? { referenceNumber } : {},
     });
   }
 
   async cancelPayout(payoutId: string): Promise<Payout> {
-    return this.request<Payout>(`/api/payouts/${payoutId}/cancel`, {
+    return this.request<Payout>(`/payouts/${payoutId}/cancel`, {
       method: 'PATCH',
     });
   }
@@ -365,7 +365,7 @@ class ApiService {
     const searchParams = new URLSearchParams();
     if (status) searchParams.append('status', status);
     const query = searchParams.toString();
-    return this.request<ApiResponse<any[]>>(`/api/attendees/event/${eventSlug}${query ? `?${query}` : ''}`);
+    return this.request<ApiResponse<any[]>>(`/attendees/event/${eventSlug}${query ? `?${query}` : ''}`);
   }
 
   async exportAttendeesBySlug(eventSlug: string, status?: string): Promise<void> {
@@ -373,7 +373,7 @@ class ApiService {
     if (status) searchParams.append('status', status);
     const query = searchParams.toString();
     
-    const url = `${this.baseURL}/api/attendees/event/${eventSlug}/export${query ? `?${query}` : ''}`;
+    const url = `${this.baseURL}/attendees/event/${eventSlug}/export${query ? `?${query}` : ''}`;
     
     try {
       const response = await fetch(url, {
@@ -419,7 +419,7 @@ class ApiService {
     const searchParams = new URLSearchParams();
     if (status) searchParams.append('status', status);
     const query = searchParams.toString();
-    return this.request<ApiResponse<any[]>>(`/api/attendees/event-id/${eventId}${query ? `?${query}` : ''}`);
+    return this.request<ApiResponse<any[]>>(`/attendees/event-id/${eventId}${query ? `?${query}` : ''}`);
   }
 
   async exportAttendees(eventId: string, status?: string): Promise<void> {
@@ -427,7 +427,7 @@ class ApiService {
     if (status) searchParams.append('status', status);
     const query = searchParams.toString();
     
-    const url = `${this.baseURL}/api/attendees/event-id/${eventId}/export${query ? `?${query}` : ''}`;
+    const url = `${this.baseURL}/attendees/event-id/${eventId}/export${query ? `?${query}` : ''}`;
     
     try {
       const response = await fetch(url, {
@@ -464,6 +464,57 @@ class ApiService {
       window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       console.error('Export attendees failed:', error);
+      throw error;
+    }
+  }
+
+  // Upload API
+  async uploadImage(file: File): Promise<{ url: string; key: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      // Use axios with withCredentials to send cookies automatically
+      const response = await axios.post(`${this.baseURL}/upload/image`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        withCredentials: true,
+      });
+
+      if (!response.data.success || !response.data.data?.url) {
+        throw new Error('Response tidak valid');
+      }
+
+      return response.data.data;
+    } catch (error) {
+      console.error('Upload image failed:', error);
+      
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<any>;
+        const errorMessage = axiosError.response?.data?.message || axiosError.message;
+        throw new Error(errorMessage);
+      }
+      
+      throw error;
+    }
+  }
+
+  async deleteImage(key: string): Promise<void> {
+    try {
+      // Use axios with withCredentials to send cookies automatically
+      await axios.delete(`${this.baseURL}/upload/${key}`, {
+        withCredentials: true,
+      });
+    } catch (error) {
+      console.error('Delete image failed:', error);
+      
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<any>;
+        const errorMessage = axiosError.response?.data?.message || axiosError.message;
+        throw new Error(errorMessage);
+      }
+      
       throw error;
     }
   }

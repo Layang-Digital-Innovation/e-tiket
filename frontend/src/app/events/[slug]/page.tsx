@@ -138,10 +138,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
         <div
           className="bg-primary text-white py-20 md:py-0"
           style={event.imageUrl ? {
-            backgroundImage: `url(${event.imageUrl})`,
+            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6)), url(${event.imageUrl})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
+            backgroundRepeat: 'no-repeat'
           } : undefined}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -178,9 +178,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                     <Image
                       src={event.imageUrl}
                       alt={event.title}
-                      fill
-                      className="object-cover"
-                      sizes="(min-width: 1024px) 500px, 100vw"
+                      width={1200}
+                      height={675}
+                      className="w-full h-auto object-cover rounded-lg"
                     />
                   ) : null}
                 </div>

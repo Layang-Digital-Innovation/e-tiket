@@ -20,7 +20,7 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { PayoutStatus } from './entities/payout.entity';
 import { UserRole } from 'src/users/entities/user.entity';
 
-@Controller('api/payouts')
+@Controller('payouts')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PayoutController {
   constructor(private readonly payoutService: PayoutService) {}

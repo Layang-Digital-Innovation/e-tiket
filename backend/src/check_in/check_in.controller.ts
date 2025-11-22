@@ -8,7 +8,7 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { UserRole } from 'src/users/entities/user.entity';
 import { EventsService } from 'src/events/events.service';
 
-@Controller('api/check-in')
+@Controller('check-in')
 @AuditController()
 export class CheckInController {
     constructor(
