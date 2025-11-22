@@ -135,16 +135,21 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
     <PublicLayout>
       <div className="min-h-screen bg-gray-50 pt-10">
         {/* Hero Section */}
-        <div
-          className="bg-primary text-white py-20 md:py-0"
-          style={event.imageUrl ? {
-            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6)), url(${event.imageUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          } : undefined}
-        >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="relative text-white py-20 md:py-0 overflow-hidden">
+          {/* Background Image with Overlay */}
+          {event.imageUrl && (
+            <div
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+              style={{
+                backgroundImage: `url(${event.imageUrl})`,
+              }}
+            />
+          )}
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-2xl" />
+          
+          {/* Content */}
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
               <div>
                 <h1 className="text-4xl md:text-5xl font-bold mb-4">
