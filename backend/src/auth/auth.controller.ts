@@ -101,29 +101,38 @@ export class AuthController {
   async googleAuthCallback(@Request() req, @Res() res: Response) {
     const result = await this.authService.login(req.user, res);
 
-    // Dynamic redirect based on Referer/Origin
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'https://naikkellas.com',
-      'https://www.naikkellas.com'
-    ];
+    // Get frontend URL from environment variable
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Dynamic redirect based on Referer/Origin (only in development)
+    const allowedOrigins = isProduction
+      ? [
+        'https://naikkellas.com',
+        'https://www.naikkellas.com'
+      ]
+      : [
+        'http://localhost:3000',
+        'https://naikkellas.com',
+        'https://www.naikkellas.com'
+      ];
 
     const referer = req.headers.referer;
     const origin = req.headers.origin;
 
-    let frontendUrl = process.env.FRONTEND_URL; // Default fallback
+    let redirectUrl = frontendUrl; // Default to FRONTEND_URL
 
     // Check if referer or origin matches allowed domains
     if (referer) {
       const match = allowedOrigins.find(url => referer.startsWith(url));
-      if (match) frontendUrl = match;
+      if (match) redirectUrl = match;
     } else if (origin) {
       const match = allowedOrigins.find(url => origin === url);
-      if (match) frontendUrl = match;
+      if (match) redirectUrl = match;
     }
 
     // Redirect to frontend with token as query parameter for cross-domain compatibility
-    res.redirect(`${frontendUrl}/auth/callback?token=${result.accessToken}`);
+    res.redirect(`${redirectUrl}/auth/callback?token=${result.accessToken}`);
   }
 
   @Post('create-admin')
