@@ -23,14 +23,14 @@ export default function LoginPage() {
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isAuthenticated, error: authError, clearError } = useAuth();
-  
+  const { login, isAuthenticated, user, error: authError, clearError } = useAuth();
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
-  
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -39,7 +39,7 @@ function LoginPageContent() {
   useEffect(() => {
     const error = searchParams.get('error');
     const reason = searchParams.get('reason');
-    
+
     if (error) {
       setSubmitError(decodeURIComponent(error));
     } else if (reason === 'session_expired') {
@@ -49,12 +49,16 @@ function LoginPageContent() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
       // Don't redirect to home - let middleware handle it
       // Instead, redirect to dashboard directly to avoid being stuck on home
-      router.push('/dashboard');
+      if (user.role === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, user, router]);
 
   // Clear auth errors when component unmounts
   useEffect(() => {
@@ -65,7 +69,7 @@ function LoginPageContent() {
 
   // Validation function
   const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
+    const newErrors: { [key: string]: string } = {};
 
     // Email validation
     if (!formData.email) {
@@ -92,7 +96,7 @@ function LoginPageContent() {
       ...prev,
       [name]: value
     }));
-    
+
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
@@ -100,7 +104,7 @@ function LoginPageContent() {
         [name]: ''
       }));
     }
-    
+
     // Clear submit error
     if (submitError) {
       setSubmitError('');
@@ -110,7 +114,7 @@ function LoginPageContent() {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -141,8 +145,8 @@ function LoginPageContent() {
             <CardTitle className="text-2xl font-bold">Masuk ke Akun Anda</CardTitle>
             <CardDescription>
               Atau{' '}
-              <Link 
-                href="/register" 
+              <Link
+                href="/register"
                 className="font-medium text-primary hover:underline"
               >
                 daftar akun baru
@@ -242,8 +246,8 @@ function LoginPageContent() {
                   </Label>
                 </div>
 
-                <Link 
-                  href="/forgot-password" 
+                <Link
+                  href="/forgot-password"
                   className="text-sm font-medium text-primary hover:underline"
                 >
                   Lupa password?
@@ -251,9 +255,9 @@ function LoginPageContent() {
               </div>
 
               {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -284,7 +288,7 @@ function LoginPageContent() {
                 variant="outline"
                 className="w-full"
                 onClick={() => {
-                  window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/google`;
+                  window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/auth/google`;
                 }}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -311,8 +315,8 @@ function LoginPageContent() {
 
             {/* Back to Home */}
             <div className="text-center pt-4">
-              <Link 
-                href="/" 
+              <Link
+                href="/"
                 className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
               >
                 ← Kembali ke Beranda
