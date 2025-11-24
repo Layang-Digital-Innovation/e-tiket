@@ -18,7 +18,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
   const { data: event, isLoading } = useEventBySlug(slug);
   const createOrderMutation = useCreateOrder(slug);
 
-    const {
+  const {
     checkoutSession,
     currentStep,
     paymentUrl,
@@ -35,7 +35,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
     decrementTimer,
     stopTimer,
   } = useCheckoutStore();
-  
+
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -95,7 +95,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
 
   // Handle timer expiration
   useEffect(() => {
-   
+
     if (currentStep === 3 && timeLeft === 0 && timerActive) {
       // Time expired, stop timer and show message
       stopTimer();
@@ -131,7 +131,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
 
   const validateStep1 = () => {
     const newErrors: { [key: string]: string } = {};
-    
+
     attendees.forEach((attendee, index) => {
       if (!attendee.name.trim()) {
         newErrors[`attendee_${index}_name`] = 'Nama wajib diisi';
@@ -152,7 +152,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
 
   const validateStep2 = () => {
     const newErrors: { [key: string]: string } = {};
-    
+
     if (!buyer.name.trim()) {
       newErrors.buyer_name = 'Nama pembeli wajib diisi';
     }
@@ -188,21 +188,21 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
 
   const handleSubmitOrder = async () => {
     if (!event || !checkoutSession || isSubmitting) return;
-    
+
     setIsSubmitting(true);
 
 
-    
+
     try {
       // Group attendees by category
       const itemsMap = new Map<string, AttendeeDetail[]>();
-      
+
       attendees.forEach((attendee) => {
         const categoryId = attendee.ticketCategoryId;
         if (!itemsMap.has(categoryId)) {
           itemsMap.set(categoryId, []);
         }
-        
+
         itemsMap.get(categoryId)!.push({
           fullName: attendee.name,
           email: attendee.email,
@@ -233,13 +233,13 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
 
       // Submit order
       const response = await createOrderMutation.mutateAsync(orderData);
-      
+
       // Clear checkout data
       // clearCheckoutSession();
 
       const totalPrice = getTotalPrice();
 
-      if(totalPrice === 0){
+      if (totalPrice === 0) {
         router.push("/payment/success")
         clearCheckoutSession()
         return;
@@ -247,15 +247,15 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
 
       console.log(response);
 
-    
-      
+
+
       // Set payment URL and proceed to step 3
       setPaymentUrl(response.data.paymentUrl);
       setStep(3);
-      
+
       // Start payment timer (60 minutes = 3600 seconds)
       startTimer(60 * 60);
-      
+
       // Redirect to order success page or events list
       // router.push('/events');
     } catch (error: any) {
@@ -288,14 +288,24 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
   return (
     <PublicLayout>
       <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
           {/* Progress Steps */}
-          <div className="mb-8">
-            <div className="relative flex items-center">
+          <div className="mb-12">
+            {/* Mobile Current Step Label */}
+            <div className="block sm:hidden text-center mb-8">
+              <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                Langkah {currentStep} dari {steps.length}
+              </span>
+              <h2 className="mt-3 text-xl font-bold text-gray-900">
+                {steps[currentStep - 1].title}
+              </h2>
+            </div>
+
+            <div className="relative max-w-4xl mx-auto px-4">
               {/* Background connecting line */}
-              <div className="absolute top-6 left-0 right-0 h-1 bg-gray-200 -z-10">
+              <div className="absolute top-1/2 left-4 right-4 h-1.5 bg-gray-100 -translate-y-1/2 rounded-full -z-10">
                 <div
-                  className="h-full bg-blue-600 transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-500 ease-out rounded-full"
                   style={{
                     width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`,
                   }}
@@ -304,35 +314,54 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
 
               {/* Steps */}
               <div className="flex w-full justify-between">
-                {steps.map((step) => (
-                  <div key={step.number} className="flex flex-col items-center">
-                    {/* Step Circle */}
-                    <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 z-10 ${
-                        currentStep >= step.number
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                          : 'bg-gray-200 text-gray-600'
-                      }`}
-                    >
-                      {currentStep > step.number ? (
-                        <Check className="h-6 w-6" />
-                      ) : (
-                        <step.icon className="h-6 w-6" />
-                      )}
-                    </div>
+                {steps.map((step) => {
+                  const isActive = currentStep === step.number;
+                  const isCompleted = currentStep > step.number;
 
-                    {/* Step Title */}
-                    <span
-                      className={`mt-3 text-sm font-medium transition-colors duration-300 text-center ${
-                        currentStep >= step.number
-                          ? 'text-blue-600'
-                          : 'text-gray-600'
-                      }`}
-                    >
-                      {step.title}
-                    </span>
-                  </div>
-                ))}
+                  return (
+                    <div key={step.number} className="flex flex-col items-center group">
+                      {/* Step Circle */}
+                      <div
+                        className={`
+                          relative flex items-center justify-center transition-all duration-500 ease-out
+                          w-10 h-10 sm:w-14 sm:h-14 rounded-full border-4 border-white
+                          ${isActive
+                            ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-500/30 scale-110 ring-4 ring-blue-50'
+                            : isCompleted
+                              ? 'bg-green-500 text-white shadow-lg shadow-green-200'
+                              : 'bg-gray-100 text-gray-400'
+                          }
+                        `}
+                      >
+                        {isCompleted ? (
+                          <Check className="w-5 h-5 sm:w-6 sm:h-6" strokeWidth={3} />
+                        ) : (
+                          <step.icon className="w-5 h-5 sm:w-6 sm:h-6" />
+                        )}
+
+                        {/* Active Indicator Dot (Mobile) */}
+                        {isActive && (
+                          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-blue-600 rounded-full sm:hidden" />
+                        )}
+                      </div>
+
+                      {/* Step Title (Desktop) */}
+                      <span
+                        className={`
+                          hidden sm:block mt-4 text-sm font-medium transition-all duration-300 text-center px-2
+                          ${isActive
+                            ? 'text-blue-700 font-bold translate-y-0 opacity-100'
+                            : isCompleted
+                              ? 'text-green-600'
+                              : 'text-gray-400'
+                          }
+                        `}
+                      >
+                        {step.title}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -370,9 +399,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                               type="text"
                               value={buyer.name}
                               onChange={(e) => updateBuyer({ ...buyer, name: e.target.value })}
-                              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                errors.buyer_name ? 'border-red-500' : 'border-gray-300'
-                              }`}
+                              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.buyer_name ? 'border-red-500' : 'border-gray-300'
+                                }`}
                               placeholder="Masukkan nama lengkap"
                             />
                             {errors.buyer_name && (
@@ -388,9 +416,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                               type="email"
                               value={buyer.email}
                               onChange={(e) => updateBuyer({ ...buyer, email: e.target.value })}
-                              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                errors.buyer_email ? 'border-red-500' : 'border-gray-300'
-                              }`}
+                              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.buyer_email ? 'border-red-500' : 'border-gray-300'
+                                }`}
                               placeholder="email@example.com"
                             />
                             {errors.buyer_email && (
@@ -406,9 +433,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                               type="tel"
                               value={buyer.phone}
                               onChange={(e) => updateBuyer({ ...buyer, phone: e.target.value })}
-                              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                errors.buyer_phone ? 'border-red-500' : 'border-gray-300'
-                              }`}
+                              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.buyer_phone ? 'border-red-500' : 'border-gray-300'
+                                }`}
                               placeholder="08xxxxxxxxxx"
                             />
                             {errors.buyer_phone && (
@@ -452,9 +478,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                                         newAttendees[index].name = e.target.value;
                                         updateAttendees(newAttendees);
                                       }}
-                                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                        errors[`attendee_${index}_name`] ? 'border-red-500' : 'border-gray-300'
-                                      }`}
+                                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors[`attendee_${index}_name`] ? 'border-red-500' : 'border-gray-300'
+                                        }`}
                                       placeholder="Masukkan nama lengkap"
                                     />
                                     {errors[`attendee_${index}_name`] && (
@@ -476,9 +501,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                                         newAttendees[index].email = e.target.value;
                                         updateAttendees(newAttendees);
                                       }}
-                                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                        errors[`attendee_${index}_email`] ? 'border-red-500' : 'border-gray-300'
-                                      }`}
+                                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors[`attendee_${index}_email`] ? 'border-red-500' : 'border-gray-300'
+                                        }`}
                                       placeholder="email@example.com"
                                     />
                                     {errors[`attendee_${index}_email`] && (
@@ -500,9 +524,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                                         newAttendees[index].phone = e.target.value;
                                         updateAttendees(newAttendees);
                                       }}
-                                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                        errors[`attendee_${index}_phone`] ? 'border-red-500' : 'border-gray-300'
-                                      }`}
+                                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors[`attendee_${index}_phone`] ? 'border-red-500' : 'border-gray-300'
+                                        }`}
                                       placeholder="08xxxxxxxxxx"
                                     />
                                     {errors[`attendee_${index}_phone`] && (
@@ -717,13 +740,13 @@ export default function CheckoutPage({ params }: { params: Promise<{ slug: strin
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
                   Ringkasan
                 </h3>
-                
+
                 <div className="space-y-3 mb-4">
                   <div>
                     <p className="text-sm text-gray-600">Event</p>
                     <p className="font-semibold text-gray-900">{event.title}</p>
                   </div>
-                  
+
                   <div>
                     <p className="text-sm text-gray-600">Total Tiket</p>
                     <p className="font-semibold text-gray-900">{getTotalTickets()} tiket</p>

@@ -100,7 +100,7 @@ export default function CreateEventPage() {
         parseInt(values.startTime.split(':')[0]),
         parseInt(values.startTime.split(':')[1])
       );
-      
+
       const endDateTime = new Date(values.endDate);
       endDateTime.setHours(
         parseInt(values.endTime.split(':')[0]),
@@ -146,7 +146,7 @@ export default function CreateEventPage() {
               })} className="space-y-6 p-6">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Informasi Dasar</h3>
-                  
+
                   <div className="grid grid-cols-1 gap-6">
                     <FormField
                       control={form.control}
@@ -171,7 +171,7 @@ export default function CreateEventPage() {
                       )}
                     />
 
-                
+
                     <FormField
                       control={form.control}
                       name="title"
@@ -189,48 +189,48 @@ export default function CreateEventPage() {
                     {
                       form.watch('eventType') === EventType.SEMINAR && (
                         <>
-                        <FormField
-                          control={form.control}
-                          name="webinarJoinUrl"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>URL Webinar *</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Masukkan URL webinar" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                          <FormField
+                            control={form.control}
+                            name="webinarJoinUrl"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>URL Webinar *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Masukkan URL webinar" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                        <FormField
-                          control={form.control}
-                          name="deliveryMode"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Metode Pelaksanaan</FormLabel>
-                              <FormControl>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Pilih metode pelaksanaan" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Object.values(DeliveryModeApi).map((mode) => (
-                                      <SelectItem key={mode} value={mode}>
-                                        {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                          <FormField
+                            control={form.control}
+                            name="deliveryMode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Metode Pelaksanaan</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Pilih metode pelaksanaan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Object.values(DeliveryModeApi).map((mode) => (
+                                        <SelectItem key={mode} value={mode}>
+                                          {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         </>
                       )
-                        
-                      
+
+
                     }
 
                     <FormField
@@ -260,7 +260,7 @@ export default function CreateEventPage() {
                             value={field.value}
                             onChange={field.onChange}
                             label="Gambar Event"
-                            description="Upload gambar poster event Anda (JPEG, PNG, WebP, GIF)"
+                            description="Upload gambar poster event Anda (JPEG, PNG, WebP, GIF). Format landscape (16:9) direkomendasikan. Ukuran optimal 1920x1080 pixels."
                             maxSize={5}
                           />
                           <FormMessage />
@@ -293,7 +293,7 @@ export default function CreateEventPage() {
 
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Lokasi dan Waktu</h3>
-                  
+
                   <div className="grid grid-cols-1 gap-6">
                     <FormField
                       control={form.control}

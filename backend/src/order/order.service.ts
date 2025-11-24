@@ -253,7 +253,7 @@ export class OrderService {
 
       // Create invoice AFTER transaction commit to avoid blocking on external API
       let invoice;
-      const adminFee = 10000
+      const adminFee = 0;
       try {
         const event = await this.eventsService.findOne(
           savedOrder.orderItems[0].ticketCategory.eventId,

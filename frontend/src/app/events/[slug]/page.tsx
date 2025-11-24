@@ -19,7 +19,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
   const router = useRouter();
   const { data: event, isLoading, error } = useEventBySlug(slug);
   const { setCheckoutSession, checkoutSession, reset, currentStep, timeLeft, paymentUrl, timerActive, startTimer, clearCheckoutSession } = useCheckoutStore();
-  
+
   const [selectedTickets, setSelectedTickets] = useState<{ [categoryId: string]: number }>({});
 
   useEffect(() => {
@@ -83,7 +83,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
 
     // Reset checkout store to clean state before creating new session
     reset();
-   
+
 
     // Create checkout session using Zustand store
     const newCheckoutSession: CheckoutState = {
@@ -147,7 +147,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
           )}
           {/* Dark Overlay */}
           <div className="absolute inset-0 bg-black/60 backdrop-blur-2xl" />
-          
+
           {/* Content */}
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
@@ -177,15 +177,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                   </div>
                 </div>
               </div>
-              <div className="hidden lg:block">
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg relative overflow-hidden aspect-[16/9]">
+              <div className="mt-8 lg:mt-0">
+                <div className="bg-black/5 backdrop-blur-sm rounded-lg relative overflow-hidden aspect-video flex items-center justify-center">
                   {event?.imageUrl ? (
                     <Image
                       src={event.imageUrl}
                       alt={event.title}
-                      width={1200}
-                      height={675}
-                      className="w-full h-auto object-cover rounded-lg"
+                      fill
+                      className="object-contain rounded-lg"
                     />
                   ) : null}
                 </div>
@@ -204,7 +203,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
                   Tentang Event
                 </h2>
-                <Separator className="my-4"/>
+                <Separator className="my-4" />
                 <div className="prose max-w-none text-gray-700">
                   <RichTextDisplay content={event.description} />
                 </div>
@@ -253,7 +252,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
                   Syarat & Ketentuan
                 </h2>
-                <Separator className="my-4"/>
+                <Separator className="my-4" />
                 <div className="prose max-w-none text-gray-700">
                   <RichTextDisplay content={event.termsAndConditions as string} />
                 </div>
@@ -276,9 +275,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                       return (
                         <div
                           key={category.id}
-                          className={`border rounded-lg p-4 ${
-                            isAvailable ? 'border-gray-200' : 'border-gray-100 bg-gray-50'
-                          }`}
+                          className={`border rounded-lg p-4 ${isAvailable ? 'border-gray-200' : 'border-gray-100 bg-gray-50'
+                            }`}
                         >
                           <div className="flex items-center justify-between mb-2 pb-4 border-b border-dashed">
                             <h1 className='text-lg font-semibold text-gray-700'>{category.name}</h1>
@@ -358,7 +356,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
                   Ringkasan Pesanan
                 </h3>
-                <Separator className="my-4"/>
+                <Separator className="my-4" />
 
                 {checkoutSession && currentStep === 3 && checkoutSession.eventSlug === slug && (
                   <div className="border-t border-gray-200 pt-4 mt-4">
@@ -386,8 +384,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                     </div>
                   </div>
                 )}
-                
-                {getTotalTickets() === 0  ? (
+
+                {getTotalTickets() === 0 ? (
                   <p className="text-gray-600 text-center py-8">
                     Belum ada tiket dipilih
                   </p>
@@ -397,7 +395,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                       {Object.entries(selectedTickets).map(([categoryId, quantity]) => {
                         const category = event.ticketCategories?.find((t: TicketCategory) => t.id === categoryId);
                         if (!category) return null;
-                        
+
                         return (
                           <div key={categoryId} className="flex justify-between text-sm">
                             <span className="text-gray-600">

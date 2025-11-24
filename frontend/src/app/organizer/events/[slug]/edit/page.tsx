@@ -79,13 +79,13 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
     if (event) {
       const startDate = new Date(event.startDate);
       const endDate = new Date(event.endDate);
-      
+
       const eventType = (event as any).eventType || EventType.CONCERT;
       const deliveryMode = (event as any).deliveryMode || DeliveryMode.ONLINE;
       const status = event.status || 'draft';
-      
+
       console.log('Event data:', { eventType, status, deliveryMode });
-      
+
       // Reset form dengan delay untuk memastikan state terupdate
       setTimeout(() => {
         form.reset({
@@ -103,7 +103,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
           deliveryMode: deliveryMode,
           status: status,
         });
-        
+
         console.log('Form reset completed. Current form values:', {
           eventType: form.getValues('eventType'),
           status: form.getValues('status'),
@@ -122,7 +122,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
         parseInt(values.startTime.split(':')[0]),
         parseInt(values.startTime.split(':')[1])
       );
-      
+
       const endDateTime = new Date(values.endDate);
       endDateTime.setHours(
         parseInt(values.endTime.split(':')[0]),
@@ -299,7 +299,7 @@ export default function EditEventPage({ params }: { params: Promise<{ slug: stri
                           value={field.value}
                           onChange={field.onChange}
                           label="Gambar Event"
-                          description="Upload gambar poster event Anda (JPEG, PNG, WebP, GIF)"
+                          description="Upload gambar poster event Anda (JPEG, PNG, WebP, GIF). Format landscape (16:9) direkomendasikan. Ukuran optimal 1920x1080 pixels."
                           maxSize={5}
                         />
                         <FormMessage />
