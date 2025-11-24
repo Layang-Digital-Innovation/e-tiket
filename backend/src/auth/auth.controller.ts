@@ -106,7 +106,7 @@ export class AuthController {
 
   @Post('create-admin')
   @UseGuards(JwtAuthGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.EVENT_ORGANIZER)
   async createAdmin(@Body(ValidationPipe) createAdminDto: CreateAdminDto) {
     return this.authService.createAdmin(createAdminDto);
   }

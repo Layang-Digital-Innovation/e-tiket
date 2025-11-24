@@ -10,17 +10,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Download, Search, Users, UserCheck, UserX, ArrowLeft } from 'lucide-react';
+import { Download, Search, Users, UserCheck, UserX, ArrowLeft, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AttendeesPage = () => {
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
-  
+
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const mapStatusForApi = (status: string | undefined): string | undefined => {
     if (!status || status === 'all') return undefined;
     switch (status) {
@@ -34,22 +34,22 @@ const AttendeesPage = () => {
         return status.toLowerCase();
     }
   };
-  
+
   // Get event by slug first to get the event ID
   const { data: event, isLoading: eventLoading } = useEventBySlug(slug);
   const eventId = event?.id;
-  
+
   const { data: attendeesData, isLoading, error } = useAttendeesBySlug(
-    slug, 
+    slug,
     mapStatusForApi(selectedStatus)
   );
 
   const exportMutation = useExportAttendees();
-  
+
 
   // Filter attendees based on search term
   const attendees = (attendeesData as any)?.data || attendeesData || [];
-  const filteredAttendees = (Array.isArray(attendees) ? attendees : []).filter((attendee: Attendee) => 
+  const filteredAttendees = (Array.isArray(attendees) ? attendees : []).filter((attendee: Attendee) =>
     attendee.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     attendee.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     attendee.ticket?.ticketCode.toLowerCase().includes(searchTerm.toLowerCase())
@@ -57,7 +57,7 @@ const AttendeesPage = () => {
 
   const handleExport = () => {
     if (!slug) return;
-    
+
     exportMutation.mutate({
       eventSlug: slug,
       status: mapStatusForApi(selectedStatus),
@@ -77,15 +77,41 @@ const AttendeesPage = () => {
       REDEEMED: { label: 'Terkonfirmasi', variant: 'default' as const },
       CHECKED_IN: { label: 'Hadir', variant: 'default' as const },
     };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || 
-                   { label: status, variant: 'secondary' as const };
-    
+
+    const config = statusConfig[status as keyof typeof statusConfig] ||
+      { label: status, variant: 'secondary' as const };
+
     return (
       <Badge variant={config.variant} className="bg-green-100 text-green-800">
         {config.label}
       </Badge>
     );
+  };
+
+  const formatPhoneNumber = (phone: string) => {
+    if (!phone) return '';
+    // Remove non-numeric characters
+    let cleaned = phone.replace(/\D/g, '');
+
+    // Replace leading 0 with 62
+    if (cleaned.startsWith('0')) {
+      cleaned = '62' + cleaned.substring(1);
+    }
+
+    return cleaned;
+  };
+
+  const handleWhatsAppFollowUp = (attendee: Attendee) => {
+    if (!attendee.phoneNumber) {
+      toast.error('Nomor telepon tidak tersedia');
+      return;
+    }
+
+    const phone = formatPhoneNumber(attendee.phoneNumber);
+    const message = `Halo ${attendee.fullName}, kami dari panitia event ${event?.title || ''}. Kami ingin menginformasikan bahwa...`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+    window.open(url, '_blank');
   };
 
   if (eventLoading || isLoading) {
@@ -114,7 +140,7 @@ const AttendeesPage = () => {
               <p className="text-gray-600 mb-4">
                 Event dengan slug &quot;{slug}&quot; tidak ditemukan atau tidak memiliki akses
               </p>
-              <Button 
+              <Button
                 onClick={() => router.push('/organizer/attendees')}
                 variant="outline"
               >
@@ -135,8 +161,8 @@ const AttendeesPage = () => {
             <div className="text-red-600 text-center">
               <h3 className="text-lg font-medium mb-2">Gagal memuat data peserta</h3>
               <p className="text-sm mb-4">{error.message}</p>
-              <Button 
-                onClick={() => window.location.reload()} 
+              <Button
+                onClick={() => window.location.reload()}
                 variant="outline"
               >
                 Muat Ulang
@@ -220,7 +246,7 @@ const AttendeesPage = () => {
         <CardContent>
           {filteredAttendees?.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {searchTerm || selectedStatus !== 'all' 
+              {searchTerm || selectedStatus !== 'all'
                 ? 'Tidak ada peserta yang cocok dengan filter'
                 : 'Belum ada data peserta'
               }
@@ -237,6 +263,7 @@ const AttendeesPage = () => {
                     <th className="text-left p-3 font-medium">Kode Tiket</th>
                     <th className="text-left p-3 font-medium">Kategori</th>
                     <th className="text-left p-3 font-medium">Status</th>
+                    <th className="text-left p-3 font-medium">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -254,6 +281,18 @@ const AttendeesPage = () => {
                       </td>
                       <td className="p-3">
                         {attendee.ticket?.status && getStatusBadge(attendee.ticket.status)}
+                      </td>
+                      <td className="p-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleWhatsAppFollowUp(attendee)}
+                          disabled={!attendee.phoneNumber}
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          title="Follow up via WhatsApp"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                        </Button>
                       </td>
                     </tr>
                   ))}
