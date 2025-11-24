@@ -29,22 +29,22 @@ async function bootstrap() {
     // Enable CORS for frontend
     logger.log('🌐 Enabling CORS...');
     const corsOrigins = process.env.NODE_ENV === 'production'
-      ? ['https://naikkellas.com']
-      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'];
-    
+      ? ['https://naikkellas.com', 'https://www.naikkellas.com']
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'https://localhost:3000'];
+
     app.enableCors({
       origin: corsOrigins,
       credentials: true,
     });
 
-      // Tambahkan ini sebelum app.listen()
-  if (configService.get('STORAGE_TYPE') !== 's3') {
-    app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-      prefix: '/uploads/',
-    });
-  }
+    // Tambahkan ini sebelum app.listen()
+    if (configService.get('STORAGE_TYPE') !== 's3') {
+      app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+        prefix: '/uploads/',
+      });
+    }
 
- 
+
 
 
 

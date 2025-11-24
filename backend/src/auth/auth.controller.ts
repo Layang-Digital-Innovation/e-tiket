@@ -29,7 +29,7 @@ import { UserRole } from 'src/users/entities/user.entity';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -100,8 +100,30 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(@Request() req, @Res() res: Response) {
     const result = await this.authService.login(req.user, res);
+
+    // Dynamic redirect based on Referer/Origin
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'https://naikkellas.com',
+      'https://www.naikkellas.com'
+    ];
+
+    const referer = req.headers.referer;
+    const origin = req.headers.origin;
+
+    let frontendUrl = process.env.FRONTEND_URL; // Default fallback
+
+    // Check if referer or origin matches allowed domains
+    if (referer) {
+      const match = allowedOrigins.find(url => referer.startsWith(url));
+      if (match) frontendUrl = match;
+    } else if (origin) {
+      const match = allowedOrigins.find(url => origin === url);
+      if (match) frontendUrl = match;
+    }
+
     // Redirect to frontend with token as query parameter for cross-domain compatibility
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${result.accessToken}`);
+    res.redirect(`${frontendUrl}/auth/callback?token=${result.accessToken}`);
   }
 
   @Post('create-admin')

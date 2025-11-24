@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
     // Verify token with backend
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     console.log(' Verifying token with backend:', backendUrl);
-    
-    const response = await axios.get(`${backendUrl}/api/auth/profile`, {
+
+    const response = await axios.get(`${backendUrl}/auth/profile`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
