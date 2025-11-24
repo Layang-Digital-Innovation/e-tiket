@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     // Create response with redirect to success page
     const redirectResponse = NextResponse.redirect(
-      new URL('/auth/success', request.url)
+      new URL('/auth/success', request.nextUrl.origin)
     );
 
     const isProduction = process.env.NODE_ENV === 'production';
