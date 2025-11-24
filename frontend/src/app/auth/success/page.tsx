@@ -9,25 +9,20 @@ export default function AuthSuccessPage() {
   const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
-    const processAuthSuccess = async () => {
+    const processAuthSuccess = () => {
       try {
-        setIsProcessing(true);
-        
-        // Get token and user data from cookies
-        const token = getCookie('access_token');
-        const userDataStr = getCookie('userData');
+        // Get user data from cookie
+        const userDataCookie = getCookie('userData');
+        const accessToken = getCookie('access_token');
 
-        console.log('OAuth Success - Token:', token ? 'EXISTS' : 'MISSING');
-        console.log('OAuth Success - UserData:', userDataStr);
-
-        if (!token || !userDataStr) {
-          throw new Error('Missing authentication data');
+        if (!userDataCookie || !accessToken) {
+          throw new Error('Missing auth data');
         }
 
-        const userData = JSON.parse(decodeURIComponent(userDataStr));
-
-        // Validate user data structure
-        if (!userData.id || !userData.email || !userData.role) {
+        let userData;
+        try {
+          userData = JSON.parse(userDataCookie);
+        } catch (e) {
           throw new Error('Invalid user data structure');
         }
 
@@ -44,7 +39,7 @@ export default function AuthSuccessPage() {
 
         // Redirect based on user role
         const redirectPath = getUserRedirectPath(userData.role);
-        
+
         // Small delay to ensure state is updated
         setTimeout(() => {
           setIsProcessing(false);
@@ -62,41 +57,6 @@ export default function AuthSuccessPage() {
 
     processAuthSuccess();
   }, [router]);
-
-  const getCookie = (name: string): string | null => {
-    if (typeof document === 'undefined') return null;
-    
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
-      return parts.pop()?.split(';').shift() || null;
-    }
-    return null;
-  };
-
-  const clearAuthData = () => {
-    // Clear localStorage
-    localStorage.removeItem('auth-storage');
-    
-    // Clear cookies
-    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'user_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'userData=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-  };
-
-  const getUserRedirectPath = (role: string): string => {
-    const normalizedRole = role?.toLowerCase();
-    switch (normalizedRole) {
-      case 'admin':
-        return '/admin/dashboard';
-      case 'event_organizer':
-        return '/organizer/events';
-      case 'user':
-        return '/dashboard';
-      default:
-        return '/dashboard';
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -130,3 +90,38 @@ export default function AuthSuccessPage() {
     </div>
   );
 }
+
+const getCookie = (name: string): string | null => {
+  if (typeof document === 'undefined') return null;
+
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop()?.split(';').shift() || null;
+  }
+  return null;
+};
+
+const clearAuthData = () => {
+  // Clear localStorage
+  localStorage.removeItem('auth-storage');
+
+  // Clear cookies
+  document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  document.cookie = 'user_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  document.cookie = 'userData=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+};
+
+const getUserRedirectPath = (role: string): string => {
+  const normalizedRole = role?.toLowerCase();
+  switch (normalizedRole) {
+    case 'admin':
+      return '/admin/dashboard';
+    case 'event_organizer':
+      return '/organizer/events';
+    case 'user':
+      return '/dashboard';
+    default:
+      return '/dashboard';
+  }
+};
