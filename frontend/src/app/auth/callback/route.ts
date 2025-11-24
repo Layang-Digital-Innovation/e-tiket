@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   if (error) {
     console.error('OAuth error:', error);
     return NextResponse.redirect(
-      new URL(`/ login ? error = ${ encodeURIComponent('Authentication failed') } `, request.url)
+      new URL(`/login?error=${encodeURIComponent('Authentication failed')}`, request.url)
     );
   }
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   if (!token) {
     console.error('No token received from OAuth callback');
     return NextResponse.redirect(
-      new URL(`/ login ? error = ${ encodeURIComponent('No authentication token received') } `, request.url)
+      new URL(`/login?error=${encodeURIComponent('No authentication token received')}`, request.url)
     );
   }
 
@@ -32,9 +32,9 @@ export async function GET(request: NextRequest) {
     console.log('🔐 Verifying token with backend:', backendUrl);
 
     // Use the token to fetch user profile
-    const response = await axios.get(`${ backendUrl } /auth/profile`, {
+    const response = await axios.get(`${backendUrl}/auth/profile`, {
       headers: {
-        'Authorization': `Bearer ${ token } `,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     // This allows the client to know WHO is logged in without exposing the token
     redirectResponse.cookies.set('userData', JSON.stringify(userData), {
       ...cookieOptions,
-      httpOnly: false, 
+      httpOnly: false,
     });
 
     return redirectResponse;
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('❌ Token verification failed:', error);
     return NextResponse.redirect(
-      new URL(`/ login ? error = ${ encodeURIComponent('Authentication verification failed') } `, request.url)
+      new URL(`/login?error=${encodeURIComponent('Authentication verification failed')}`, request.url)
     );
   }
 }
