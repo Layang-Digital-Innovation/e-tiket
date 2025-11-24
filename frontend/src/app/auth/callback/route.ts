@@ -47,12 +47,16 @@ export async function GET(request: NextRequest) {
     const userData = payload.data;
     console.log('✅ Token verified, user:', userData.email);
 
+    // Determine the correct frontend URL for redirect
+    const isProduction = process.env.NODE_ENV === 'production';
+    const frontendUrl = process.env.NEXT_PUBLIC_APP_URL ||
+      (isProduction ? 'https://naikkellas.com' : 'http://localhost:3000');
+
     // Create response with redirect to success page
     const redirectResponse = NextResponse.redirect(
-      new URL('/auth/success', request.nextUrl.origin)
+      new URL('/auth/success', frontendUrl)
     );
 
-    const isProduction = process.env.NODE_ENV === 'production';
     const cookieOptions = {
       httpOnly: true, // Secure: Client JS cannot read this
       secure: isProduction, // HTTPS only in production
