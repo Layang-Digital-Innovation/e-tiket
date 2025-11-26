@@ -15,7 +15,7 @@ export default function FAQPage() {
                                 Bagaimana cara membeli tiket?
                             </h3>
                             <p className="text-gray-600 dark:text-gray-300">
-                                Anda dapat membeli tiket dengan memilih event yang diinginkan, klik tombol "Beli Tiket", pilih kategori dan jumlah tiket, lalu selesaikan pembayaran melalui metode yang tersedia.
+                                Anda dapat membeli tiket dengan memilih event yang diinginkan, klik tombol &quot;Beli Tiket&quot;, pilih kategori dan jumlah tiket, lalu selesaikan pembayaran melalui metode yang tersedia.
                             </p>
                         </div>
 
