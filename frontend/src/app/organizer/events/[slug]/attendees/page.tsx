@@ -12,6 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Download, Search, Users, UserCheck, UserX, ArrowLeft, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { BulkTicketDialog } from '@/components/organizer/BulkTicketDialog';
+import { WhatsAppTemplateDialog } from '@/components/organizer/WhatsAppTemplateDialog';
+import { useTicketCategories } from '@/hooks/useTickets';
+
 
 const AttendeesPage = () => {
   const params = useParams();
@@ -20,6 +24,9 @@ const AttendeesPage = () => {
 
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [whatsappTemplate, setWhatsappTemplate] = useState<string>(
+    `Halo {name}, kami dari panitia event {event}. Kami ingin menginformasikan bahwa...`
+  );
 
   const mapStatusForApi = (status: string | undefined): string | undefined => {
     if (!status || status === 'all') return undefined;
@@ -45,6 +52,19 @@ const AttendeesPage = () => {
   );
 
   const exportMutation = useExportAttendees();
+
+  // Get ticket categories for bulk ticket creation
+  const { data: categoriesData } = useTicketCategories(eventId || '', !!eventId);
+  const categories = categoriesData || [];
+
+  // Load WhatsApp template from localStorage on mount
+  useEffect(() => {
+    const savedTemplate = localStorage.getItem('whatsapp_template');
+    if (savedTemplate) {
+      setWhatsappTemplate(savedTemplate);
+    }
+  }, []);
+
 
 
   // Filter attendees based on search term
@@ -108,7 +128,14 @@ const AttendeesPage = () => {
     }
 
     const phone = formatPhoneNumber(attendee.phoneNumber);
-    const message = `Halo ${attendee.fullName}, kami dari panitia event ${event?.title || ''}. Kami ingin menginformasikan bahwa...`;
+
+    // Replace template variables with actual data
+    const message = whatsappTemplate
+      .replace(/{name}/g, attendee.fullName)
+      .replace(/{event}/g, event?.title || '')
+      .replace(/{ticketCode}/g, attendee.ticket?.ticketCode || '')
+      .replace(/{category}/g, attendee.ticket?.category?.name || '');
+
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
     window.open(url, '_blank');
@@ -197,16 +224,30 @@ const AttendeesPage = () => {
             </p>
           </div>
         </div>
-        <Button
-          onClick={handleExport}
-          disabled={exportMutation.isPending || attendees.length === 0}
-          className="flex items-center space-x-2"
-        >
-          <Download className="h-4 w-4" />
-          <span>
-            {exportMutation.isPending ? 'Mengexport...' : 'Export CSV'}
-          </span>
-        </Button>
+        <div className="flex items-center space-x-2">
+          <WhatsAppTemplateDialog
+            eventTitle={event?.title}
+            currentTemplate={whatsappTemplate}
+            onTemplateChange={setWhatsappTemplate}
+          />
+          {eventId && (
+            <BulkTicketDialog
+              eventId={eventId}
+              eventSlug={slug}
+              categories={categories}
+            />
+          )}
+          <Button
+            onClick={handleExport}
+            disabled={exportMutation.isPending || attendees.length === 0}
+            className="flex items-center space-x-2"
+          >
+            <Download className="h-4 w-4" />
+            <span>
+              {exportMutation.isPending ? 'Mengexport...' : 'Export Excel'}
+            </span>
+          </Button>
+        </div>
       </div>
 
 

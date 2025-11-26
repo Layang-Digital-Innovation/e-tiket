@@ -85,12 +85,12 @@ export function useUpdateTicketCategory() {
       toast.success('Kategori tiket berhasil diperbarui!');
       // Invalidate specific ticket category detail
       queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.detail(variables.id) });
-      
+
       // Invalidate ticket categories list for this event
       if (variables.eventId) {
         queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.list(variables.eventId) });
       }
-      
+
       // Invalidate all ticket categories lists
       queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.lists() });
     },
@@ -114,7 +114,7 @@ export function useDeleteTicketCategory() {
       toast.success('Kategori tiket berhasil dihapus!');
       // Remove from cache
       queryClient.removeQueries({ queryKey: ticketCategoryKeys.detail(id) });
-      
+
       // Invalidate all ticket categories lists
       queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.lists() });
     },
@@ -138,7 +138,7 @@ export function useToggleTicketCategory() {
       toast.success('Status kategori tiket berhasil diubah!');
       // Invalidate specific ticket category detail
       queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.detail(id) });
-      
+
       // Invalidate all ticket categories lists
       queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.lists() });
     },
@@ -148,3 +148,39 @@ export function useToggleTicketCategory() {
   });
 }
 
+/**
+ * Create bulk tickets manually
+ */
+export function useCreateBulkTicket() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      categoryId,
+      attendees,
+      eventSlug
+    }: {
+      categoryId: string;
+      attendees: any[];
+      eventSlug: string;
+    }) => {
+      return await apiService.createManualTicket({ categoryId, attendees });
+    },
+    onSuccess: (_, variables) => {
+      toast.success('Tiket berhasil dibuat!');
+
+      // Invalidate attendees queries for this event
+      queryClient.invalidateQueries({
+        queryKey: ['attendees', 'event', variables.eventSlug]
+      });
+
+      // Invalidate ticket categories to update sold count
+      queryClient.invalidateQueries({
+        queryKey: ticketCategoryKeys.lists()
+      });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal membuat tiket: ${error.message || 'Terjadi kesalahan'}`);
+    },
+  });
+}

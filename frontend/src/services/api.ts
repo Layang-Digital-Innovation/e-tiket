@@ -15,7 +15,7 @@ class ApiService {
     options: AxiosRequestConfig = {}
   ): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
-    
+
     const config: AxiosRequestConfig = {
       url,
       method: options.method || 'GET',
@@ -32,13 +32,13 @@ class ApiService {
       return response.data;
     } catch (error) {
       console.error('API request failed:', error);
-      
+
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<any>;
         const errorMessage = axiosError.response?.data?.message || axiosError.message;
         throw new Error(errorMessage);
       }
-      
+
       throw error;
     }
   }
@@ -53,7 +53,7 @@ class ApiService {
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
     if (params?.status) searchParams.append('status', params.status);
-    
+
     const query = searchParams.toString();
     return this.request(`/event${query ? `?${query}` : ''}`);
   }
@@ -94,7 +94,7 @@ class ApiService {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
-    
+
     const query = searchParams.toString();
     return this.request(`/event/my-events${query ? `?${query}` : ''}`);
   }
@@ -143,6 +143,13 @@ class ApiService {
     });
   }
 
+  async createManualTicket(data: { categoryId: string; attendees: any[] }) {
+    return this.request('/ticket/manual', {
+      method: 'POST',
+      data,
+    });
+  }
+
   // Orders/Purchases API
   async createOrder(orderData: CreateOrderRequest): Promise<ApiResponse<CreateOrderResponse>> {
     return this.request<ApiResponse<CreateOrderResponse>>('/order', {
@@ -158,7 +165,7 @@ class ApiService {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
-    
+
     const query = searchParams.toString();
     return this.request(`/order${query ? `?${query}` : ''}`);
   }
@@ -191,9 +198,9 @@ class ApiService {
   async register(userData: {
     email: string;
     password: string;
-    firstName : string;
-    lastName : string;
-    phone : string;
+    firstName: string;
+    lastName: string;
+    phone: string;
   }) {
     return this.request('/auth/register', {
       method: 'POST',
@@ -214,9 +221,9 @@ class ApiService {
   }
 
   // Redeem API
-  async redeemTicket(data: { 
-    ticketCode: string; 
-    wristbandCode?: string; 
+  async redeemTicket(data: {
+    ticketCode: string;
+    wristbandCode?: string;
     itemCode?: string;
     eventId?: string;
     redeemStrategy?: string;
@@ -243,7 +250,7 @@ class ApiService {
   }
 
   // Check-in API
-  async checkIn(checkInData: { 
+  async checkIn(checkInData: {
     wristbandCode?: string; // Legacy compatibility
     itemCode?: string; // For WRISTBAND/BIB strategies
     ticketCode?: string; // For NONE strategy
@@ -273,15 +280,15 @@ class ApiService {
     limit?: number;
     status?: string;
     search?: string;
-  }) : Promise<PaginatedResponse<Event[]>> {
+  }): Promise<PaginatedResponse<Event[]>> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
     if (params?.status) searchParams.append('status', params.status);
     if (params?.search) searchParams.append('search', params.search);
-    
+
     const query = searchParams.toString();
-    return this.request <PaginatedResponse<Event[]>>(`/event${query ? `?${query}` : ''}`);
+    return this.request<PaginatedResponse<Event[]>>(`/event${query ? `?${query}` : ''}`);
   }
 
   async getAdminStats() {
@@ -294,7 +301,7 @@ class ApiService {
     role?: string;
     status?: string;
     search?: string;
-  }) : Promise<PaginatedResponse<User[]>> {
+  }): Promise<PaginatedResponse<User[]>> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
@@ -307,14 +314,14 @@ class ApiService {
   }
 
   // Payout API
-  async getOrganizerPayouts(organizerId: string, status?: string) : Promise<PaginatedResponse<Payout[]>> {
+  async getOrganizerPayouts(organizerId: string, status?: string): Promise<PaginatedResponse<Payout[]>> {
     const searchParams = new URLSearchParams();
     if (status) searchParams.append('status', status);
     const query = searchParams.toString();
     return this.request<PaginatedResponse<Payout[]>>(`/payouts/organizer/${organizerId}${query ? `?${query}` : ''}`);
   }
 
-  async getAllPayouts(status?: string, organizerId?: string) : Promise<PaginatedResponse<Payout[]>> {
+  async getAllPayouts(status?: string, organizerId?: string): Promise<PaginatedResponse<Payout[]>> {
     const searchParams = new URLSearchParams();
     if (status) searchParams.append('status', status);
     if (organizerId) searchParams.append('organizerId', organizerId);
@@ -322,7 +329,7 @@ class ApiService {
     return this.request<PaginatedResponse<Payout[]>>(`/payouts${query ? `?${query}` : ''}`);
   }
 
-  async getPayoutDetail(payoutId: string) : Promise<ApiResponse<Payout>> {
+  async getPayoutDetail(payoutId: string): Promise<ApiResponse<Payout>> {
     return this.request<ApiResponse<Payout>>(`/payouts/${payoutId}`);
   }
 
@@ -372,9 +379,9 @@ class ApiService {
     const searchParams = new URLSearchParams();
     if (status) searchParams.append('status', status);
     const query = searchParams.toString();
-    
+
     const url = `${this.baseURL}/attendees/event/${eventSlug}/export${query ? `?${query}` : ''}`;
-    
+
     try {
       const response = await fetch(url, {
         method: 'GET',
@@ -426,9 +433,9 @@ class ApiService {
     const searchParams = new URLSearchParams();
     if (status) searchParams.append('status', status);
     const query = searchParams.toString();
-    
+
     const url = `${this.baseURL}/attendees/event-id/${eventId}/export${query ? `?${query}` : ''}`;
-    
+
     try {
       const response = await fetch(url, {
         method: 'GET',
@@ -489,13 +496,13 @@ class ApiService {
       return response.data.data;
     } catch (error) {
       console.error('Upload image failed:', error);
-      
+
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<any>;
         const errorMessage = axiosError.response?.data?.message || axiosError.message;
         throw new Error(errorMessage);
       }
-      
+
       throw error;
     }
   }
@@ -508,13 +515,13 @@ class ApiService {
       });
     } catch (error) {
       console.error('Delete image failed:', error);
-      
+
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<any>;
         const errorMessage = axiosError.response?.data?.message || axiosError.message;
         throw new Error(errorMessage);
       }
-      
+
       throw error;
     }
   }

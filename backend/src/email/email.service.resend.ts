@@ -66,13 +66,13 @@ export class EmailService {
   async sendVerificationEmail(email: string, token: string, name: string) {
     try {
       const verificationUrl = `${this.configService.get('FRONTEND_URL')}/verify-email?token=${token}`;
-      
+
       const template = this.readTemplate('email-verification');
       const html = this.processTemplate(template, {
         firstName: name,
         verificationUrl: verificationUrl,
       });
-      
+
       const response = await this.resend.emails.send({
         from: this.fromEmail,
         to: email,
@@ -96,13 +96,13 @@ export class EmailService {
   async sendPasswordResetEmail(email: string, token: string, name: string) {
     try {
       const resetUrl = `${this.configService.get('FRONTEND_URL')}/reset-password?token=${token}`;
-      
+
       const template = this.readTemplate('password-reset');
       const html = this.processTemplate(template, {
         firstName: name,
         resetUrl: resetUrl,
       });
-      
+
       const response = await this.resend.emails.send({
         from: this.fromEmail,
         to: email,
@@ -130,7 +130,7 @@ export class EmailService {
         firstName: name,
         platformUrl: this.configService.get('FRONTEND_URL', 'http://localhost:3000'),
       });
-      
+
       const response = await this.resend.emails.send({
         from: this.fromEmail,
         to: email,
@@ -175,15 +175,11 @@ export class EmailService {
     try {
       const { email, subject, ticket } = params;
 
-      // Generate QR code as base64
-      const qrDataUrl = await QRCode.toDataURL(ticket.ticketCode, {
-        errorCorrectionLevel: 'M',
-        type: 'image/png',
-        width: 200,
-        margin: 1,
-      });
+      // Use external QR code API for better email client compatibility
+      // Gmail and many email clients block base64 inline images
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(ticket.ticketCode)}&size=200x200&margin=10`;
 
-      this.logger.log(`Generated QR code for ticket: ${ticket.ticketCode}`);
+      this.logger.log(`Generated QR code URL for ticket: ${ticket.ticketCode}`);
 
       // Format dates
       const formatDate = (dateString: string) => {
@@ -207,7 +203,7 @@ export class EmailService {
       const formattedStartDate = formatDate(ticket.startDate);
       const formattedEndDate = formatDate(ticket.endDate);
 
-      // Create HTML email with embedded QR code (base64)
+      // Create HTML email with CID reference for QR code
       const htmlContent = `
         <!DOCTYPE html>
         <html lang="id">
@@ -435,7 +431,7 @@ export class EmailService {
                             <h3>QR Code Tiket</h3>
                             <p>Tunjukkan QR code ini saat check-in</p>
                             <div class="qr-code-container">
-                                <img src="${qrDataUrl}" alt="QR Code ${ticket.ticketCode}" />
+                                <img src="${qrCodeUrl}" alt="QR Code ${ticket.ticketCode}" style="display:block;width:200px;height:200px;" />
                             </div>
                         </div>
 
@@ -648,24 +644,92 @@ export class EmailService {
       const startStr = formatDate(startAt);
       const endStr = formatDate(endAt);
 
+      // Plain text version (helps avoid spam)
+      const plainText = `
+Akses Webinar Anda
+
+Halo ${attendeeName},
+
+Anda terdaftar pada webinar ${eventTitle}.
+${startStr ? `Waktu mulai: ${startStr}` : ''}
+${endStr ? `Waktu selesai: ${endStr}` : ''}
+
+Silakan gunakan tautan berikut untuk bergabung saat waktu sudah dimulai:
+${webinarJoinUrl}
+
+Mohon untuk tidak membagikan tautan ini kepada orang lain.
+${webinarNotes ? `\n\nCatatan:\n${webinarNotes}` : ''}
+
+---
+Jika Anda memiliki pertanyaan, silakan hubungi kami.
+Email ini dikirim secara otomatis, mohon tidak membalas email ini.
+      `.trim();
+
       const html = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial; color:#0f172a;">
-        <h2 style="margin:0 0 8px 0;">Akses Webinar Anda</h2>
-        <p style="margin:0 0 16px 0;">Halo <strong>${attendeeName}</strong>,</p>
-        <p style="margin:0 0 8px 0;">Anda terdaftar pada webinar <strong>${eventTitle}</strong>.</p>
-        ${startStr ? `<p style="margin:0 0 4px 0;">Waktu mulai: <strong>${startStr}</strong></p>` : ''}
-        ${endStr ? `<p style="margin:0 0 12px 0;">Waktu selesai: <strong>${endStr}</strong></p>` : ''}
-        <p style="margin:0 12px 16px 0;">Silakan gunakan tautan berikut untuk bergabung saat waktu sudah dimulai:</p>
-        <p style="margin:0 0 16px 0;"><a href="${webinarJoinUrl}" style="background:#1d4ed8;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block;">Gabung Webinar</a></p>
-        <p style="margin:0 0 12px 0; font-size:13px; color:#475569;">Mohon untuk tidak membagikan tautan ini kepada orang lain.</p>
-        ${webinarNotes ? `<div style="margin-top:12px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;white-space:pre-wrap;">${webinarNotes}</div>` : ''}
-      </div>`;
+      <!DOCTYPE html>
+      <html lang="id">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin:0;padding:0;background:#f5f5f5;">
+        <div style="max-width:600px;margin:20px auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <div style="background:#1d4ed8;padding:24px;text-align:center;">
+            <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:600;">Akses Webinar Anda</h1>
+          </div>
+          
+          <!-- Content -->
+          <div style="padding:32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#0f172a;line-height:1.6;">
+            <p style="margin:0 0 16px 0;font-size:16px;">Halo <strong>${attendeeName}</strong>,</p>
+            <p style="margin:0 0 16px 0;">Anda terdaftar pada webinar <strong>${eventTitle}</strong>.</p>
+            
+            ${startStr || endStr ? `
+            <div style="background:#f8fafc;border-left:4px solid #1d4ed8;padding:16px;margin:16px 0;border-radius:4px;">
+              ${startStr ? `<p style="margin:0 0 8px 0;"><strong>Waktu Mulai:</strong> ${startStr}</p>` : ''}
+              ${endStr ? `<p style="margin:0;"><strong>Waktu Selesai:</strong> ${endStr}</p>` : ''}
+            </div>
+            ` : ''}
+            
+            <p style="margin:16px 0;">Silakan gunakan tombol berikut untuk bergabung saat waktu sudah dimulai:</p>
+            
+            <div style="text-align:center;margin:24px 0;">
+              <a href="${webinarJoinUrl}" style="background:#1d4ed8;color:#ffffff;padding:14px 28px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600;font-size:16px;">Gabung Webinar</a>
+            </div>
+            
+            <p style="margin:16px 0;font-size:14px;color:#64748b;">Atau salin tautan berikut ke browser Anda:</p>
+            <p style="margin:0 0 16px 0;font-size:13px;color:#1d4ed8;word-break:break-all;">${webinarJoinUrl}</p>
+            
+            ${webinarNotes ? `
+            <div style="margin:20px 0;padding:16px;background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;">
+              <p style="margin:0 0 8px 0;font-weight:600;color:#92400e;">Catatan Penting:</p>
+              <div style="margin:0;color:#78350f;white-space:pre-wrap;font-size:14px;">${webinarNotes}</div>
+            </div>
+            ` : ''}
+            
+            <div style="margin:24px 0;padding:16px;background:#fef2f2;border-left:4px solid #dc2626;border-radius:4px;">
+              <p style="margin:0;font-size:14px;color:#991b1b;"><strong>⚠️ Penting:</strong> Mohon untuk tidak membagikan tautan ini kepada orang lain. Tautan ini bersifat pribadi dan hanya untuk Anda.</p>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background:#f9fafb;padding:20px 24px;border-top:1px solid #e5e7eb;text-align:center;">
+            <p style="margin:0 0 8px 0;font-size:13px;color:#6b7280;">Jika Anda memiliki pertanyaan, silakan hubungi kami.</p>
+            <p style="margin:0;font-size:12px;color:#9ca3af;">Email ini dikirim secara otomatis, mohon tidak membalas email ini.</p>
+          </div>
+        </div>
+      </body>
+      </html>`;
 
       const response = await this.resend.emails.send({
         from: this.fromEmail,
         to,
-        subject: `[${eventTitle}] Akses Webinar Anda`,
+        subject: `Akses Webinar: ${eventTitle}`, // Removed brackets to avoid spam filters
         html,
+        text: plainText, // Add plain text version
+        headers: {
+          'X-Entity-Ref-ID': `webinar-${Date.now()}`, // Unique identifier
+        },
       });
 
       if (response.error) {

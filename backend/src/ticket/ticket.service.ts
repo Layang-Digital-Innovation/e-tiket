@@ -1,17 +1,22 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { Ticket, TicketStatus } from './entities/ticket.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository, LessThan } from 'typeorm';
 import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
+import { Attendee } from 'src/attendees/entities/attendee.entity';
+import { EmailService } from 'src/email/email.service.resend';
+import { EventType } from 'src/events/enums/event.enums';
+import { DeliveryMode } from 'src/events/entities/event.entity';
 
 @Injectable()
 export class TicketService {
   constructor(
     @InjectRepository(Ticket)
-    private readonly ticketRepository: Repository<Ticket>
-  ) {}
+    private readonly ticketRepository: Repository<Ticket>,
+    private readonly emailService: EmailService
+  ) { }
 
   async findOneByCode(ticketCode: string, manager?: EntityManager) {
     const repository = manager
@@ -36,7 +41,119 @@ export class TicketService {
   }
 
   create(createTicketDto: CreateTicketDto) {
-    return this.ticketRepository.save(createTicketDto);
+    throw new BadRequestException('Use createManualTicket for creating tickets');
+  }
+
+  async createManualTicket(createTicketDto: CreateTicketDto) {
+    const { categoryId, attendees } = createTicketDto;
+
+    return this.ticketRepository.manager.transaction(async (entityManager) => {
+      // 1. Get Category with Event relation using INNER JOIN to support pessimistic lock
+      const category = await entityManager
+        .createQueryBuilder(TicketCategory, 'category')
+        .innerJoinAndSelect('category.event', 'event')
+        .where('category.id = :categoryId', { categoryId })
+        .setLock('pessimistic_write')
+        .getOne();
+
+      if (!category) {
+        throw new NotFoundException('Ticket category not found');
+      }
+
+      // 2. Check Capacity
+      if (category.sold + attendees.length > category.maxQuantity) {
+        throw new BadRequestException('Not enough tickets available in this category');
+      }
+
+      const createdTicketsWithAttendees: Array<{ ticket: Ticket; attendee: Attendee }> = [];
+
+      // 3. Create Tickets and Attendees
+      for (const attendeeDto of attendees) {
+        // Create Ticket
+        const ticket = new Ticket();
+        ticket.category = category;
+        ticket.status = TicketStatus.UNUSED;
+        await ticket.generateTicketCode();
+
+        const savedTicket = await entityManager.save(Ticket, ticket);
+
+        // Create Attendee
+        const attendee = new Attendee();
+        attendee.fullName = attendeeDto.fullName;
+        attendee.email = attendeeDto.email;
+        attendee.phoneNumber = attendeeDto.phoneNumber;
+        attendee.identityType = attendeeDto.identityType;
+        attendee.identityNumber = attendeeDto.identityNumber;
+        attendee.gender = attendeeDto.gender;
+        attendee.address = attendeeDto.address;
+        if (attendeeDto.birthDate) {
+          attendee.birthDate = new Date(attendeeDto.birthDate);
+        }
+        attendee.ticket = savedTicket;
+
+        const savedAttendee = await entityManager.save(Attendee, attendee);
+
+        // Store both ticket and attendee together
+        createdTicketsWithAttendees.push({ ticket: savedTicket, attendee: savedAttendee });
+      }
+
+      // 4. Update Category Sold Count
+      category.sold += attendees.length;
+      await entityManager.save(TicketCategory, category);
+
+      // 5. Send Email to Attendees
+      for (const { ticket, attendee } of createdTicketsWithAttendees) {
+
+
+        Logger.log("Event Type :", category.event.eventType)
+        Logger.log("Delivery Mode :", category.event.deliveryMode)
+
+        // Check if event type is SEMINAR
+        if (category.event.eventType === EventType.SEMINAR && category.event.deliveryMode === DeliveryMode.ONLINE) {
+          await this.emailService.sendWebinarAccessEmail({
+            to: attendee.email,
+            attendeeName: attendee.fullName,
+            eventTitle: category.event.title,
+            webinarJoinUrl: category.event.webinarJoinUrl as string,
+            startAt: category.event.startDate.toISOString(),
+            endAt: category.event.endDate.toISOString(),
+          });
+
+          // Send ticket email
+          await this.emailService.sendTicketEmail({
+            email: attendee.email,
+            ticket: {
+              eventName: category.event.title,
+              ticketCode: ticket.ticketCode,
+              attendeeName: attendee.fullName,
+              startDate: category.event.startDate.toISOString(),
+              endDate: category.event.endDate.toISOString(),
+              location: category.event.location,
+              categoryName: category.name,
+            },
+            attendeeIdentityNumber: attendee.identityNumber,
+          });
+
+        } else {
+          // Send regular ticket email for non-seminar events
+          await this.emailService.sendTicketEmail({
+            email: attendee.email,
+            ticket: {
+              eventName: category.event.title,
+              ticketCode: ticket.ticketCode,
+              attendeeName: attendee.fullName,
+              startDate: category.event.startDate.toISOString(),
+              endDate: category.event.endDate.toISOString(),
+              location: category.event.location,
+              categoryName: category.name,
+            },
+            attendeeIdentityNumber: attendee.identityNumber,
+          });
+        }
+      }
+
+      return createdTicketsWithAttendees.map(({ ticket }) => ticket);
+    });
   }
 
   async findAll(manager?: EntityManager) {
@@ -52,7 +169,7 @@ export class TicketService {
     const repository = manager
       ? manager.getRepository(Ticket)
       : this.ticketRepository;
-    
+
     const queryBuilder = repository
       .createQueryBuilder('ticket')
       .innerJoinAndSelect('ticket.category', 'category')
@@ -74,7 +191,7 @@ export class TicketService {
 
     const tickets = await queryBuilder.getMany();
     console.log(`Found ${tickets.length} tickets for slug: ${eventSlug}`);
-    
+
     if (tickets.length > 0) {
       console.log('Sample ticket:', {
         id: tickets[0].id,
@@ -97,17 +214,17 @@ export class TicketService {
         WHERE e.slug = $1
         GROUP BY e.id, e.slug, e.title
       `;
-      
+
       const debugResult = await repository.query(eventCheckQuery, [eventSlug]);
       console.log('Event check result:', debugResult);
-      
+
       if (debugResult.length === 0) {
         console.log(`❌ Event with slug '${eventSlug}' not found in database`);
       } else {
         const event = debugResult[0];
         console.log(`✅ Event found: ${event.title}`);
         console.log(`📊 Categories: ${event.category_count}, Tickets: ${event.ticket_count}`);
-        
+
         if (event.ticket_count === '0') {
           console.log('❌ No tickets found for this event');
         }
@@ -258,7 +375,7 @@ export class TicketService {
    */
   async markAsRedeemed(ticketCode: string, manager?: EntityManager): Promise<Ticket> {
     const ticket = await this.validateTicketForRedeem(ticketCode, manager);
-    
+
     ticket.status = TicketStatus.REDEEMED;
     ticket.redeemedAt = new Date();
 
@@ -323,7 +440,7 @@ export class TicketService {
    */
   async generateTestTickets(categoryId: string, quantity: number = 10) {
     const tickets: Ticket[] = [];
-    
+
     // Get category with event info
     const category = await this.ticketRepository.manager.getRepository(TicketCategory).findOne({
       where: { id: categoryId },
@@ -338,15 +455,15 @@ export class TicketService {
       const ticket = new Ticket();
       ticket.category = category;
       ticket.status = TicketStatus.UNUSED;
-      
+
       // Generate ticket code via BeforeInsert hook
       await ticket.generateTicketCode();
-      
+
       tickets.push(ticket);
     }
 
     const savedTickets = await this.ticketRepository.save(tickets);
-    
+
     return {
       message: `Generated ${quantity} test tickets`,
       count: savedTickets.length,

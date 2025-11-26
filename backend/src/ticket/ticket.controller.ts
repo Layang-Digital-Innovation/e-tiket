@@ -14,11 +14,16 @@ import { UpdateTicketDto } from './dto/update-ticket.dto';
 
 @Controller('ticket')
 export class TicketController {
-  constructor(private readonly ticketService: TicketService) {}
+  constructor(private readonly ticketService: TicketService) { }
 
   @Post()
   create(@Body() createTicketDto: CreateTicketDto) {
     return this.ticketService.create(createTicketDto);
+  }
+
+  @Post('manual')
+  createManual(@Body() createTicketDto: CreateTicketDto) {
+    return this.ticketService.createManualTicket(createTicketDto);
   }
 
   @Post('test/generate')

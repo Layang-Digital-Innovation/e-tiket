@@ -54,7 +54,7 @@ export default async function Home() {
         {/* Hero Section with Image Slider */}
         <HeroSlider heroImages={heroImages} />
 
-  
+
 
         {/* Events Carousel Section */}
         <HomeEventsCarousel />
@@ -99,7 +99,7 @@ export default async function Home() {
                         className="h-8 w-auto object-contain"
                       />
                     </div>
-                       <div className="min-w-[120px] md:min-w-[140px] h-[70px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex items-center justify-center">
+                    <div className="min-w-[120px] md:min-w-[140px] h-[70px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex items-center justify-center">
                       <Image
                         src={client5}
                         alt="Logo klien Naik Kelas"
@@ -185,7 +185,7 @@ export default async function Home() {
                   Saatnya bisnis kamu dikenal banyak orang!
                 </h2>
                 <p className="text-lg text-gray-300">
-                kami percaya cerita baik layak disampaikan dengan baik
+                  kami percaya cerita baik layak disampaikan dengan baik
                 </p>
               </div>
 
@@ -206,13 +206,13 @@ export default async function Home() {
         {/* Footer */}
         <footer className="bg-primary text-white py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid md:grid-cols-4 gap-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
               <div>
                 <div className="mb-4">
-                <Image src={naikKelas} alt="naikkelas" width={200} height={200}/>
+                  <Image src={naikKelas} alt="naikkelas" width={200} height={200} />
                 </div>
                 <p className="text-gray-400">
-                 media pengusaha muda untuk tumbuh naik kelas
+                  media pengusaha muda untuk tumbuh naik kelas
                 </p>
               </div>
               <div>
@@ -250,6 +250,31 @@ export default async function Home() {
                     >
                       Instagram
                     </Link>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-4">Bantuan & Legal</h3>
+                <ul className="space-y-2 text-gray-400">
+                  <li><Link href="/faq" className="hover:text-white">FAQ</Link></li>
+                  <li><Link href="/privacy-policy" className="hover:text-white">Kebijakan Privasi</Link></li>
+                  <li><Link href="/terms-and-conditions" className="hover:text-white">Syarat & Ketentuan</Link></li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-4">Hubungi Kami</h3>
+                <ul className="space-y-2 text-gray-400">
+                  <li>
+                    <p className="font-medium text-white">Alamat:</p>
+                    <p>Jl. Siliwangi No.54, Kota Tasikmalaya</p>
+                  </li>
+                  <li>
+                    <p className="font-medium text-white">Email:</p>
+                    <a href="mailto:layanggroup@gmail.com" className="hover:text-white">layanggroup@gmail.com</a>
+                  </li>
+                  <li>
+                    <p className="font-medium text-white">WhatsApp:</p>
+                    <a href="https://wa.me/6285182322580" target="_blank" className="hover:text-white">0851-8232-2580</a>
                   </li>
                 </ul>
               </div>
