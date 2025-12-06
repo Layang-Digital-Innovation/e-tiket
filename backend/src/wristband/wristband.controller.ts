@@ -3,7 +3,7 @@ import { WristbandService } from './wristband.service';
 import { CreateWristbandDto } from './dto/create-wristband.dto';
 import { UpdateWristbandDto } from './dto/update-wristband.dto';
 
-@Controller('api/wristband')
+@Controller('wristband')
 export class WristbandController {
   constructor(private readonly wristbandService: WristbandService) {}
 

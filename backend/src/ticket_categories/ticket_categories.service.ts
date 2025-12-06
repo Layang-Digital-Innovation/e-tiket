@@ -12,6 +12,9 @@ import { Repository } from 'typeorm';
 import { EventsValidationService } from 'src/events/validation/validation.service';
 import { TicketCategoriesValidationService } from './validation/validation.service';
 import { WristbandService } from 'src/wristband/wristband.service';
+import { EventsService } from 'src/events/events.service';
+import { OrderItem } from 'src/order_item/entities/order_item.entity';
+import { Ticket } from 'src/ticket/entities/ticket.entity';
 
 @Injectable()
 export class TicketCategoriesService {
@@ -20,9 +23,14 @@ export class TicketCategoriesService {
   constructor(
     @InjectRepository(TicketCategory)
     private readonly ticketCategoriesRepository: Repository<TicketCategory>,
+    @InjectRepository(OrderItem)
+    private readonly orderItemRepository: Repository<OrderItem>,
+    @InjectRepository(Ticket)
+    private readonly ticketRepository: Repository<Ticket>,
     private readonly wristbandService: WristbandService,
     private readonly validateEventService: EventsValidationService,
     private readonly validateTicketCategoryService: TicketCategoriesValidationService,
+    private readonly eventsService: EventsService,
   ) {}
 
    async create(createTicketCategoryDto: CreateTicketCategoryDto) {
@@ -42,18 +50,22 @@ export class TicketCategoriesService {
         `✅ Ticket Category created: ${savedTicketCategory.id} | Max Quantity: ${savedTicketCategory.maxQuantity}`,
       );
 
-      // ✅ 4. Generate Wristbands secara asynchronous (pakai Bull Queue)
-      await this.wristbandService.generateWristbandByMaxCapacity(
-        savedTicketCategory.maxQuantity,
-        savedTicketCategory.eventId,
-        savedTicketCategory.id,
-      );
+      // // ✅ 4. Generate Wristbands secara asynchronous (pakai Bull Queue)
+      // await this.wristbandService.generateWristbandByMaxCapacity(
+      //   savedTicketCategory.maxQuantity,
+      //   savedTicketCategory.eventId,
+      //   savedTicketCategory.id,
+      // );
 
-      this.logger.log(
-        `🪪 Successfully queued generation of ${savedTicketCategory.maxQuantity} wristbands for category ${savedTicketCategory.id}`,
-      );
+      // this.logger.log(
+      //   `🪪 Successfully queued generation of ${savedTicketCategory.maxQuantity} wristbands for category ${savedTicketCategory.id}`,
+      // );
 
-      // ✅ 5. Return data hasil simpan
+      // ✅ 5. Update basePrice event dengan harga termurah
+      await this.eventsService.updateBasePrice(savedTicketCategory.eventId);
+      this.logger.log(`💰 Updated event basePrice for event ${savedTicketCategory.eventId}`);
+
+      // ✅ 6. Return data hasil simpan
       return savedTicketCategory;
     } catch (error) {
       this.logger.error('❌ Failed to create ticket category', error.stack);
@@ -80,12 +92,59 @@ export class TicketCategoriesService {
     return category;
   }
 
-  update(id: string, updateTicketCategoryDto: UpdateTicketCategoryDto) {
-    return this.ticketCategoriesRepository.update(id, updateTicketCategoryDto);
+  async update(id: string, updateTicketCategoryDto: UpdateTicketCategoryDto) {
+    const ticketCategory = await this.findOneOrThrow(id);
+    const oldMaxQuantity = ticketCategory.maxQuantity;
+    
+    await this.ticketCategoriesRepository.update(id, updateTicketCategoryDto);
+    
+    const updatedCategory = await this.findOneOrThrow(id);
+    
+    // Update basePrice event jika harga berubah
+    if (updateTicketCategoryDto.price !== undefined) {
+      await this.eventsService.updateBasePrice(ticketCategory.eventId);
+      this.logger.log(`💰 Updated event basePrice for event ${ticketCategory.eventId}`);
+    }
+    
+ 
+    
+    return updatedCategory;
   }
 
-  remove(id: string) {
-    return this.ticketCategoriesRepository.delete(id);
+  async remove(id: string) {
+    const ticketCategory = await this.findOneOrThrow(id);
+    const eventId = ticketCategory.eventId;
+    
+    // ✅ Validasi: Cek apakah ada OrderItem yang menggunakan category ini
+    const orderItemCount = await this.orderItemRepository.count({
+      where: { ticketCategory: { id } }
+    });
+    
+    if (orderItemCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete ticket category. There are ${orderItemCount} order(s) associated with this category. Please cancel or complete those orders first.`
+      );
+    }
+    
+    // ✅ Validasi: Cek apakah ada Ticket yang menggunakan category ini
+    const ticketCount = await this.ticketRepository.count({
+      where: { category: { id } }
+    });
+    
+    if (ticketCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete ticket category. There are ${ticketCount} ticket(s) associated with this category.`
+      );
+    }
+    
+    // ✅ Jika lolos validasi, hapus category (wristband akan otomatis terhapus karena CASCADE)
+    await this.ticketCategoriesRepository.delete(id);
+    
+    this.logger.log(`✅ Ticket category ${id} deleted successfully. Associated wristbands were also deleted.`);
+    
+    // Update basePrice event setelah ticket category dihapus
+    await this.eventsService.updateBasePrice(eventId);
+    this.logger.log(`💰 Updated event basePrice for event ${eventId} after deletion`);
   }
 
   async increaseSoldQuantity(
@@ -107,6 +166,12 @@ export class TicketCategoriesService {
 
     category.sold += quantity;
 
+    await this.ticketCategoriesRepository.save(category);
+  }
+
+  async toggleTicketStatus(categoryId: string): Promise<void> {
+    const category = await this.findOneOrThrow(categoryId);
+    category.isActive = !category.isActive;
     await this.ticketCategoriesRepository.save(category);
   }
 }

@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { PT_Sans, PT_Serif } from "next/font/google";
+import { Figtree, PT_Serif } from "next/font/google";
 import "./globals.css";
 import ReactQueryProvider from "@/lib/react-query";
 import { AuthInitializer } from "@/components/auth/AuthInitializer";
+import { Toaster } from "sonner";
 
-const ptSans = PT_Sans({
-  variable: "--font-pt-sans",
-  weight: ["400", "700"],
+const figtree = Figtree({
+  variable: "--font-sans",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
 const ptSerif = PT_Serif({
@@ -17,9 +18,10 @@ const ptSerif = PT_Serif({
 }); 
 
 export const metadata: Metadata = {
-  title: "Event Ticketing System",
-  description: "Platform untuk mengelola dan membeli tiket event",
+  title: "Naik Kelas",
+  description: "Media Pengusaha Muda",
   referrer: "no-referrer",
+  icons : "/favicon.ico",
 };
 
 export default function RootLayout({
@@ -29,12 +31,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body
-        className={`${ptSans.variable} ${ptSerif.variable} antialiased`}
-      >
+      <body className={`${figtree.variable} ${ptSerif.variable} antialiased`}>
         <ReactQueryProvider>
           <AuthInitializer />
           {children}
+          <Toaster position="top-right" richColors />
         </ReactQueryProvider>
       </body>
     </html>

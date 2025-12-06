@@ -123,6 +123,10 @@ export class CallbackSuccessDto {
   @IsString()
   payment_method_id?: string;
 
+  @IsOptional()
+  @IsString()
+  payment_destination?: string;
+
   // E-wallet specific
   @IsOptional()
   @IsString()

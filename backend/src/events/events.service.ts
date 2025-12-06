@@ -12,6 +12,7 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { UserRole } from '../users/entities/user.entity';
 import slugify from 'slugify';
 import { TicketCategory } from '../ticket_categories/entities/ticket_category.entity';
+import { EventType, RedeemStrategy } from './enums/event.enums';
 
 @Injectable()
 export class EventsService {
@@ -36,7 +37,7 @@ export class EventsService {
     }
 
     // Generate base slug
-    let baseSlug = slugify(createEventDto.title, {
+    const baseSlug = slugify(createEventDto.title, {
       lower: true,
       strict: true,
       trim: true,
@@ -48,8 +49,13 @@ export class EventsService {
       slug = `${baseSlug}-${counter++}`;
     }
 
+    const redeemStrategy =
+      createEventDto.redeemStrategy ??
+      this.getDefaultRedeemStrategy(createEventDto.eventType);
+
     const event = this.eventsRepository.create({
       ...createEventDto,
+      redeemStrategy,
       startDate,
       endDate,
       slug,
@@ -148,8 +154,14 @@ export class EventsService {
       }
     }
 
+    const redeemStrategy = this.resolveRedeemStrategyUpdate(
+      event,
+      updateEventDto,
+    );
+
     await this.eventsRepository.update(id, {
       ...updateEventDto,
+      redeemStrategy,
       startDate: updateEventDto.startDate
         ? new Date(updateEventDto.startDate)
         : undefined,
@@ -169,10 +181,11 @@ export class EventsService {
       throw new ForbiddenException('You can only delete your own events');
     }
 
-    // Check if event has ended
-    const currentDate = new Date();
-    if (currentDate < event.endDate) {
-      throw new BadRequestException('Cannot delete event before it has ended');
+    // Check if event is published
+    if (event.status === EventStatus.PUBLISHED) {
+      throw new BadRequestException(
+        'Cannot delete published event. Please change status to draft or cancelled first.',
+      );
     }
 
     // Delete related ticket categories first
@@ -200,5 +213,63 @@ export class EventsService {
       status,
     });
     return this.findOne(id);
+  }
+
+  /**
+   * Update basePrice event dengan harga termurah dari ticket categories
+   */
+  async updateBasePrice(eventId: string): Promise<void> {
+    const ticketCategories = await this.ticketCategoriesRepository.find({
+      where: { eventId },
+    });
+
+    if (ticketCategories.length === 0) {
+      // Jika tidak ada ticket category, set basePrice ke 0
+      await this.eventsRepository.update(eventId, { basePrice: 0 });
+      return;
+    }
+
+    // Cari harga termurah dari semua ticket categories
+    const minPrice = Math.min(...ticketCategories.map(tc => tc.price));
+
+    // Update basePrice event
+    await this.eventsRepository.update(eventId, { basePrice: minPrice });
+  }
+
+  getTotalEvents(): Promise<number> {
+    return this.eventsRepository.count();
+  }
+
+  getTotalActiveEvents(): Promise<number> {
+    return this.eventsRepository.count({
+      where: { status: EventStatus.PUBLISHED }
+    });
+  }
+
+  private getDefaultRedeemStrategy(eventType: EventType): RedeemStrategy {
+    switch (eventType) {
+      case EventType.RUNNING:
+        return RedeemStrategy.BIB;
+      case EventType.SEMINAR:
+        return RedeemStrategy.NONE;
+      case EventType.CONCERT:
+      default:
+        return RedeemStrategy.WRISTBAND;
+    }
+  }
+
+  private resolveRedeemStrategyUpdate(
+    existingEvent: Event,
+    updateEventDto: UpdateEventDto,
+  ): RedeemStrategy {
+    if (updateEventDto.redeemStrategy) {
+      return updateEventDto.redeemStrategy;
+    }
+
+    if (updateEventDto.eventType) {
+      return this.getDefaultRedeemStrategy(updateEventDto.eventType);
+    }
+
+    return existingEvent.redeemStrategy;
   }
 }

@@ -1,9 +1,21 @@
-
-
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 
 export class CheckInDto {
-    @IsNotEmpty()
+    // New universal code field
+    @IsOptional()
     @IsString()
-    wristbandCode: string;
+    code?: string;
+
+    // Legacy fields for backward compatibility
+    @IsOptional()
+    @IsString()
+    wristbandCode?: string;
+
+    @IsOptional()
+    @IsString()
+    itemCode?: string;
+
+    @IsOptional()
+    @IsString()
+    ticketCode?: string;
 }

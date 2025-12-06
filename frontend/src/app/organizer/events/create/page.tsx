@@ -6,7 +6,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiService } from '@/services/api';
-import { CreateEventRequest } from '@/types/api';
+import { CreateEventRequest, EventTypeApi, RedeemStrategyApi, DeliveryModeApi } from '@/types/api';
 import {
   Form,
   FormControl,
@@ -17,17 +17,22 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { error } from 'console';
+import { useCreateEvent } from '@/hooks';
+import { DeliveryMode, EventType } from '@/types';
 
 const eventFormSchema = z.object({
   title: z.string().min(1, 'Judul event wajib diisi'),
@@ -41,13 +46,26 @@ const eventFormSchema = z.object({
   }),
   startTime: z.string().min(1, 'Waktu mulai wajib diisi'),
   endTime: z.string().min(1, 'Waktu selesai wajib diisi'),
+  eventType: z.nativeEnum(EventType, { required_error: 'Jenis event wajib dipilih' }),
   imageUrl: z.string().optional(),
+  deliveryMode: z.nativeEnum(DeliveryMode),
+  webinarJoinUrl: z.string().optional(),
+  termsAndConditions: z.string().optional(),
 }).refine(data => {
   const startDateTime = new Date(data.startDate);
   const endDateTime = new Date(data.endDate);
-  return startDateTime < endDateTime;
+  const [startHourStr, startMinuteStr] = data.startTime.split(':');
+  const [endHourStr, endMinuteStr] = data.endTime.split(':');
+  const startTotalMinutes =
+    parseInt(startHourStr, 10) * 60 + (startMinuteStr ? parseInt(startMinuteStr, 10) : 0);
+  const endTotalMinutes =
+    parseInt(endHourStr, 10) * 60 + (endMinuteStr ? parseInt(endMinuteStr, 10) : 0);
+  return (
+    startDateTime <= endDateTime &&
+    (startDateTime < endDateTime || startTotalMinutes <= endTotalMinutes)
+  );
 }, {
-  message: 'Tanggal selesai harus setelah tanggal mulai',
+  message: 'Tanggal selesai harus setelah atau sama dengan tanggal mulai, dan jika sama maka waktu selesai tidak boleh lebih awal dari waktu mulai',
   path: ['endDate'],
 });
 
@@ -63,11 +81,17 @@ export default function CreateEventPage() {
       endDate: new Date(),
       startTime: '08:00',
       endTime: '17:00',
+      eventType: EventType.CONCERT,
       imageUrl: '',
+      termsAndConditions: '',
+      webinarJoinUrl: '',
+      deliveryMode: DeliveryMode.ONLINE,
     },
   });
 
   const isLoading = form.formState.isSubmitting;
+
+  const createEventMutation = useCreateEvent();
 
   const onSubmit = async (values: z.infer<typeof eventFormSchema>) => {
     try {
@@ -76,7 +100,7 @@ export default function CreateEventPage() {
         parseInt(values.startTime.split(':')[0]),
         parseInt(values.startTime.split(':')[1])
       );
-      
+
       const endDateTime = new Date(values.endDate);
       endDateTime.setHours(
         parseInt(values.endTime.split(':')[0]),
@@ -89,15 +113,17 @@ export default function CreateEventPage() {
         location: values.location,
         startDate: startDateTime.toISOString(),
         endDate: endDateTime.toISOString(),
+        eventType: values.eventType,
         imageUrl: values.imageUrl || undefined,
+        termsAndConditions: values.termsAndConditions || undefined,
+        webinarJoinUrl: values.webinarJoinUrl || undefined,
+        deliveryMode: values.deliveryMode || DeliveryMode.ONLINE,
       };
 
-      await apiService.createEvent(eventData);
-      alert('Event berhasil dibuat!');
-      router.push('/eo/events');
+      await createEventMutation.mutateAsync(eventData);
+      router.push('/organizer/events');
     } catch (error) {
       console.error('Failed to create event:', error);
-      alert('Gagal membuat event. Silakan coba lagi.');
     }
   };
 
@@ -106,11 +132,6 @@ export default function CreateEventPage() {
       <div className="container max-w-screen-lg mx-auto py-6 sm:px-6 lg:px-10">
         <div className="px-4 py-6 sm:px-0">
           <div className="mb-8">
-            <div className="flex items-center space-x-4 mb-4">
-              <Link href="/eo/events" className="text-gray-600 hover:text-gray-900">
-                ← Kembali ke Daftar Event
-              </Link>
-            </div>
             <h1 className="text-3xl font-bold text-gray-900">Buat Event Baru</h1>
             <p className="mt-2 text-gray-600">
               Isi informasi lengkap untuk event yang akan Anda buat
@@ -119,11 +140,38 @@ export default function CreateEventPage() {
 
           <div className="bg-white shadow rounded-lg">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-6">
+              <form onSubmit={form.handleSubmit(onSubmit, (error) => {
+                console.error('Failed to create event:', error);
+                alert('Gagal membuat event. Silakan coba lagi.');
+              })} className="space-y-6 p-6">
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Informasi Dasar</h3>
-                  
+
                   <div className="grid grid-cols-1 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="eventType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Jenis Event *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Pilih jenis event" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.values(EventTypeApi).map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+
                     <FormField
                       control={form.control}
                       name="title"
@@ -138,6 +186,53 @@ export default function CreateEventPage() {
                       )}
                     />
 
+                    {
+                      form.watch('eventType') === EventType.SEMINAR && (
+                        <>
+                          <FormField
+                            control={form.control}
+                            name="webinarJoinUrl"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>URL Webinar *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Masukkan URL webinar" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="deliveryMode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Metode Pelaksanaan</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Pilih metode pelaksanaan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Object.values(DeliveryModeApi).map((mode) => (
+                                        <SelectItem key={mode} value={mode}>
+                                          {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </>
+                      )
+
+
+                    }
+
                     <FormField
                       control={form.control}
                       name="description"
@@ -145,7 +240,11 @@ export default function CreateEventPage() {
                         <FormItem>
                           <FormLabel>Deskripsi Event *</FormLabel>
                           <FormControl>
-                            <Textarea rows={4} placeholder="Jelaskan detail event Anda" {...field} />
+                            <RichTextEditor
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Jelaskan detail event Anda dengan format yang menarik..."
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -157,12 +256,33 @@ export default function CreateEventPage() {
                       name="imageUrl"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>URL Gambar Event</FormLabel>
+                          <ImageUpload
+                            value={field.value}
+                            onChange={field.onChange}
+                            label="Gambar Event"
+                            description="Upload gambar poster event Anda (JPEG, PNG, WebP, GIF). Format landscape (16:9) direkomendasikan. Ukuran optimal 1920x1080 pixels."
+                            maxSize={5}
+                          />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="termsAndConditions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Syarat dan Ketentuan</FormLabel>
                           <FormControl>
-                            <Input placeholder="https://example.com/image.jpg" {...field} />
+                            <RichTextEditor
+                              value={field.value || ''}
+                              onChange={field.onChange}
+                              placeholder="Masukkan syarat dan ketentuan event (opsional)..."
+                            />
                           </FormControl>
                           <FormDescription>
-                            Opsional. Masukkan URL gambar untuk poster event
+                            Opsional. Syarat dan ketentuan yang berlaku untuk event ini
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -173,7 +293,7 @@ export default function CreateEventPage() {
 
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Lokasi dan Waktu</h3>
-                  
+
                   <div className="grid grid-cols-1 gap-6">
                     <FormField
                       control={form.control}
@@ -223,7 +343,6 @@ export default function CreateEventPage() {
                                   disabled={(date: Date) =>
                                     date < new Date() || date < new Date("1900-01-01")
                                   }
-                                  initialFocus
                                 />
                               </PopoverContent>
                             </Popover>
@@ -265,7 +384,6 @@ export default function CreateEventPage() {
                                   disabled={(date: Date) =>
                                     date < new Date() || date < new Date("1900-01-01")
                                   }
-                                  initialFocus
                                 />
                               </PopoverContent>
                             </Popover>

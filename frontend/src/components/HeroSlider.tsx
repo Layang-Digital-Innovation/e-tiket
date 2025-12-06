@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import Image from "next/image";
+import Image, { StaticImageData } from "next/image";
 import { Button } from "@/components/ui/button";
 
 interface HeroSliderProps {
-  heroImages: string[];
+  heroImages: StaticImageData[];
 }
 
 export default function HeroSlider({ heroImages }: HeroSliderProps) {
@@ -19,7 +19,7 @@ export default function HeroSlider({ heroImages }: HeroSliderProps) {
   }, [heroImages.length]);
 
   return (
-    <section className="relative overflow-hidden min-h-screen font-heebo">
+    <section className="relative overflow-hidden min-h-screen pt-20">
       {/* Background Image Slider */}
       <div className="absolute inset-0">
         {heroImages.map((image, index) => (
@@ -47,19 +47,11 @@ export default function HeroSlider({ heroImages }: HeroSliderProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 w-full">
           <div className="max-w-2xl">
             <h1 className="text-3xl md:text-5xl font-pt-serif font-bold text-white mb-6 leading-tight">
-              Platform Tiket Event Terdepan
+              Setiap Bisnis Besar Dimulai dari Langkah Pertama.
             </h1>
             <p className="text-xl text-gray-200 mb-8 leading-relaxed">
-              Buat, kelola, dan jual tiket event Anda dengan mudah. Bergabunglah dengan ribuan event organizer yang mempercayai platform kami.
+              Inilah ruang untuk kamu bertumbuh naik kelas dan mulai membangun versi terbaik dari dirimu.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button size={"lg"}>
-                Cari Event
-              </Button>
-              <Button variant={"outline"} size={"lg"}>
-                Buat Event
-              </Button>
-            </div>
           </div>
         </div>
       </div>

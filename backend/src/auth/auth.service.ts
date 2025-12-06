@@ -6,7 +6,7 @@ import { RegisterDto } from './dto/register.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 import { JwtPayload } from './strategies/jwt.strategy';
-import { EmailService } from '../email/email.service';
+import { EmailService } from '../email/email.service.resend';
 import { Response } from 'express';
 import * as crypto from 'crypto';
 
@@ -45,6 +45,7 @@ export class AuthService {
     this.setAuthCookie(response, accessToken);
 
     return {
+      accessToken,
       user: {
         id: user.id,
         email: user.email,
@@ -59,6 +60,7 @@ export class AuthService {
   private setAuthCookie(response: Response, token: string) {
     const isProduction = this.configService.get('NODE_ENV') === 'production';
     const cookieMaxAge = this.configService.get<number>('COOKIE_MAX_AGE') || 7 * 24 * 60 * 60 * 1000; // 7 days default
+    const cookieDomain = this.configService.get<string>('COOKIE_DOMAIN') || undefined;
 
     response.cookie('access_token', token, {
       httpOnly: true,
@@ -66,6 +68,7 @@ export class AuthService {
       sameSite: isProduction ? 'strict' : 'lax',
       maxAge: cookieMaxAge,
       path: '/',
+      domain: cookieDomain,
     });
   }
 
@@ -75,6 +78,7 @@ export class AuthService {
       secure: this.configService.get('NODE_ENV') === 'production',
       sameSite: this.configService.get('NODE_ENV') === 'production' ? 'strict' : 'lax',
       path: '/',
+      domain: this.configService.get<string>('COOKIE_DOMAIN') || undefined,
     });
   }
 
@@ -102,11 +106,11 @@ export class AuthService {
     const user = await this.usersService.create(userData);
 
     // Send verification email
-    await this.emailService.sendVerificationEmail(
-      user.email,
-      emailVerificationToken,
-      user.firstName,
-    );
+    // await this.emailService.sendVerificationEmail(
+    //   user.email,
+    //   emailVerificationToken,
+    //   user.firstName,
+    // );
 
     return {
       message: 'Registration successful. Please check your email to verify your account.',
@@ -194,7 +198,7 @@ export class AuthService {
     }
 
     // Send welcome email
-    await this.emailService.sendWelcomeEmail(updatedUser.email, updatedUser.firstName);
+    // await this.emailService.sendWelcomeEmail(updatedUser.email, updatedUser.firstName);
 
     // Generate JWT token for auto-login
     const payload: JwtPayload = {

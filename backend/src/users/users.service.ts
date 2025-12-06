@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThan, MoreThanOrEqual } from 'typeorm';
 import { User, UserRole, UserStatus } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -188,5 +188,75 @@ export class UsersService {
       resetPasswordToken: undefined,
       resetPasswordExpires: undefined,
     });
+  }
+
+
+
+  getTotalUsers(): Promise<number> {
+    return this.usersRepository.count();
+  }
+
+  getTotalEventOrganizers(): Promise<number> {
+    return this.usersRepository.count({
+      where: { role: UserRole.EVENT_ORGANIZER }
+    });
+  }
+
+  getUsersCountBeforeDate(date: Date): Promise<number> {
+    return this.usersRepository.count({
+      where: {
+        createdAt: LessThan(date)
+      }
+    });
+  }
+
+  getEventOrganizersCountAfterDate(date: Date): Promise<number> {
+    return this.usersRepository.count({
+      where: {
+        role: UserRole.EVENT_ORGANIZER,
+        createdAt: MoreThanOrEqual(date)
+      }
+    });
+  }
+
+  async findAllUsers(
+    page: number = 1,
+    limit: number = 10,
+    filters: any = {},
+  ): Promise<{ users: any[]; total: number; page: number; limit: number }> {
+    const query = this.usersRepository.createQueryBuilder('user');
+
+    // Apply filters
+    if (filters.role) {
+      query.andWhere('user.role = :role', { role: filters.role });
+    }
+
+    if (filters.status) {
+      query.andWhere('user.status = :status', { status: filters.status });
+    }
+
+    if (filters.search) {
+      query.andWhere(
+        '(user.firstName ILIKE :search OR user.lastName ILIKE :search OR user.email ILIKE :search)',
+        { search: `%${filters.search}%` }
+      );
+    }
+
+    // Get total count
+    const total = await query.getCount();
+
+    // Apply pagination
+    const users = await query
+      .orderBy('user.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    return {
+      users,
+      total,
+      page,
+      limit,
+    };
   }
 }

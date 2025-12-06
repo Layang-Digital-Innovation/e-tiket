@@ -65,28 +65,35 @@ export class WristbandService {
   findAssignedWristband() {
     return this.wristbandRepository.find({
       where: { status: WristbandStatus.ASSIGNED },
-      relations: ['event', 'category'],
+      relations: ['event', 'category', 'assignedTicket', 'assignedTicket.attendee'],
     });
   }
 
   findAssignedWristbandByCategory(categoryId: string) {
     return this.wristbandRepository.find({
       where: { status: WristbandStatus.ASSIGNED, category: { id: categoryId } },
-      relations: ['event', 'category'],
+      relations: ['event', 'category', 'assignedTicket', 'assignedTicket.attendee'],
     });
   }
 
   findCheckedInWristbandByCategory(categoryId: string) {
     return this.wristbandRepository.find({
       where: { status: WristbandStatus.CHECKED_IN, category: { id: categoryId } },
-      relations: ['event', 'category', 'ticket'],
+      relations: ['event', 'category', 'assignedTicket', 'assignedTicket.attendee'],
     });
   }
 
   findCheckedInWristbandByEvent(eventSlug: string) {
     return this.wristbandRepository.find({
       where: { status: WristbandStatus.CHECKED_IN, event: { slug: eventSlug } },
-      relations: ['event', 'category', 'ticket'],
+      relations: ['event', 'category', 'assignedTicket', 'assignedTicket.attendee'],
+    });
+  }
+
+  findCheckedInWristbandByEventId(eventId: string) {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.CHECKED_IN, event: { id: eventId } },
+      relations: ['event', 'category', 'assignedTicket', 'assignedTicket.attendee'],
     });
   }
 
@@ -100,6 +107,16 @@ export class WristbandService {
     const wristband = await repository.findOne({
       where: { wristbandCode },
       relations: ['event', 'category', 'assignedTicket'],
+    });
+
+    if (!wristband) throw new NotFoundException('Wristband not found');
+    return wristband;
+  }
+
+  async findOneByCodeWithEventAndOrganizer(wristbandCode: string) {
+    const wristband = await this.wristbandRepository.findOne({
+      where: { wristbandCode },
+      relations: ['event', 'event.organizer'],
     });
 
     if (!wristband) throw new NotFoundException('Wristband not found');
@@ -130,6 +147,22 @@ export class WristbandService {
       order: { createdAt: 'ASC' },
     });
   }
+
+  findAllCheckInList() {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.CHECKED_IN },
+      relations: ['event', 'category', 'assignedTicket', 'assignedTicket.attendee'],
+    });
+  }
+
+  findAssignedWristbandByEvent(eventId: string) {
+    return this.wristbandRepository.find({
+      where: { status: WristbandStatus.ASSIGNED, event: { id: eventId } },
+      relations: ['event', 'category', 'assignedTicket', 'assignedTicket.attendee'],
+    });
+  }
+
+  
 
   async getUnusedWristbandCountByEvent(eventSlug: string) {
     return this.wristbandRepository.count({

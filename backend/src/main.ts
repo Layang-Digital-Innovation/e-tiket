@@ -8,6 +8,9 @@ import { AppModule } from './app.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import cookieParser from 'cookie-parser';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
+import { join } from 'path';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -15,8 +18,9 @@ async function bootstrap() {
   try {
     logger.log('🟡 Starting Nest application...');
 
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create<NestExpressApplication>(AppModule);
     logger.log('✅ NestFactory created successfully.');
+    const configService = app.get(ConfigService);
 
     // Enable cookie parser
     logger.log('🍪 Enabling cookie parser...');
@@ -24,10 +28,25 @@ async function bootstrap() {
 
     // Enable CORS for frontend
     logger.log('🌐 Enabling CORS...');
+    const corsOrigins = process.env.NODE_ENV === 'production'
+      ? ['https://naikkellas.com', 'https://www.naikkellas.com']
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'https://localhost:3000'];
+
     app.enableCors({
-      origin: ['http://localhost:3000', 'http://localhost:3001'],
+      origin: corsOrigins,
       credentials: true,
     });
+
+    // Tambahkan ini sebelum app.listen()
+    if (configService.get('STORAGE_TYPE') !== 's3') {
+      app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+        prefix: '/uploads/',
+      });
+    }
+
+
+
+
 
     // Enable global validation
     logger.log('🧩 Setting up global pipes...');

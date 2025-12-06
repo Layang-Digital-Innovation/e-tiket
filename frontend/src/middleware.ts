@@ -19,7 +19,9 @@ function decodeAndValidateToken(token: string): { role: string | null; isValid: 
       }
     }
     
-    return { role: decoded.role || null, isValid: true };
+    // Normalize role to lowercase so it matches frontend role checks
+    const normalizedRole = decoded.role ? String(decoded.role).toLowerCase() : null;
+    return { role: normalizedRole, isValid: true };
   } catch (error) {
     console.error('Failed to decode token:', error);
     return { role: null, isValid: false };
@@ -28,7 +30,7 @@ function decodeAndValidateToken(token: string): { role: string | null; isValid: 
 
 // Role-based default routes
 const roleDefaultRoutes: Record<string, string> = {
-  'admin': '/admin',
+  'admin': '/admin/dashboard',
   'event_organizer': '/organizer/events',
   'user': '/dashboard',
 };
@@ -55,7 +57,7 @@ export function middleware(req: NextRequest) {
   }
 
   // Protected routes that require authentication
-  const protectedPaths = ['/dashboard', '/organizer', '/admin'];
+  const protectedPaths = ['/dashboard', '/organizer', '/admin', '/redeem', '/checkin'];
   const isProtectedPath = protectedPaths.some(path => 
     pathname === path || pathname.startsWith(path + '/')
   );
@@ -64,8 +66,7 @@ export function middleware(req: NextRequest) {
   const authPaths = ['/login', '/register'];
   const isAuthPath = authPaths.includes(pathname);
 
-  // Debug logging
-  if (process.env.NODE_ENV === 'development') {
+
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🔍 Middleware Check');
     console.log('📍 Path:', pathname);
@@ -74,7 +75,6 @@ export function middleware(req: NextRequest) {
     console.log('✅ Valid:', isTokenValid);
     console.log('👤 Role:', userRole || 'UNKNOWN');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  }
 
   // 1. Redirect to login if accessing protected route without token OR with expired token
   if ((!token || !isTokenValid) && isProtectedPath) {
@@ -99,11 +99,45 @@ export function middleware(req: NextRequest) {
   }
 
   // 2.5. Redirect authenticated users from home page to their role-based route
-  if (token && pathname === '/' && userRole) {
-    const defaultRoute = roleDefaultRoutes[userRole];
-    if (defaultRoute && defaultRoute !== '/') {
-      console.log('✅ REDIRECTING FROM HOME - Role:', userRole, '→', defaultRoute);
+  if (token && isTokenValid && pathname === '/') {
+    // If role is available, use role-based route; otherwise default to /dashboard
+    const defaultRoute = userRole && roleDefaultRoutes[userRole] 
+      ? roleDefaultRoutes[userRole] 
+      : '/dashboard';
+    
+    console.log('✅ REDIRECTING FROM HOME - Role:', userRole, '→', defaultRoute);
+    return NextResponse.redirect(new URL(defaultRoute, req.url));
+  }
+
+  // 2.6. Fallback: If token exists but not validated yet, still redirect from home to dashboard
+  // This handles cases where token validation might be delayed or role decode failed
+  if (token && pathname === '/') {
+    // Even if token validation failed, if we have a role from cookie, redirect
+    if (userRole) {
+      const defaultRoute = roleDefaultRoutes[userRole] || '/dashboard';
+      console.log('✅ REDIRECTING FROM HOME (fallback with role) - Role:', userRole, '→', defaultRoute);
       return NextResponse.redirect(new URL(defaultRoute, req.url));
+    }
+    
+    // If no role but token exists, default to /dashboard to prevent being stuck on home
+    console.log('⚠️ REDIRECTING FROM HOME (fallback no role) - Token exists but no role, defaulting to /dashboard');
+    return NextResponse.redirect(new URL('/dashboard', req.url));
+  }
+
+  // 2.7. Ultra fallback: If pathname is '/' and we have userData cookie, redirect to dashboard
+  // This catches cases where token validation completely failed but user data still exists
+  const userDataCookie = req.cookies.get('userData')?.value;
+  if (pathname === '/' && userDataCookie) {
+    try {
+      const userData = JSON.parse(decodeURIComponent(userDataCookie));
+      const role = userData.role ? String(userData.role).toLowerCase() : null;
+      const defaultRoute = role && roleDefaultRoutes[role] ? roleDefaultRoutes[role] : '/dashboard';
+      console.log('✅ REDIRECTING FROM HOME (ultra fallback) - Found userData cookie, role:', role, '→', defaultRoute);
+      return NextResponse.redirect(new URL(defaultRoute, req.url));
+    } catch (error) {
+      console.error('⚠️ Failed to parse userData cookie:', error);
+      console.log('⚠️ REDIRECTING FROM HOME (ultra fallback error) - Defaulting to /dashboard');
+      return NextResponse.redirect(new URL('/dashboard', req.url));
     }
   }
 
@@ -115,9 +149,9 @@ export function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // Organizer can only access /organizer routes
-    if ((userRole === 'organizer' || userRole === 'event_organizer') && pathname.startsWith('/organizer')) {
-      console.log('✅ ACCESS GRANTED - Organizer access to organizer routes');
+    // Organizer can only access /organizer, /redeem, and /checkin routes
+    if ((userRole === 'organizer' || userRole === 'event_organizer') && (pathname.startsWith('/organizer') || pathname.startsWith('/redeem') || pathname.startsWith('/checkin'))) {
+      console.log('✅ ACCESS GRANTED - Organizer access to organizer, redeem, and checkin routes');
       return NextResponse.next();
     }
 
@@ -143,6 +177,8 @@ export const config = {
     '/dashboard/:path*',
     '/organizer/:path*',
     '/admin/:path*',
+    '/redeem/:path*',
+    '/checkin/:path*',
     '/login',
     '/register',
     '/', // Home page untuk redirect berdasarkan role

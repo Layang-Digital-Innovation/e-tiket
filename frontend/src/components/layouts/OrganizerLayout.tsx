@@ -1,8 +1,9 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, Suspense } from 'react';
 import OrganizerSidebar from '../sidebar/OrganizerSidebar';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '../ui/sidebar';
+import NavigationProgress from '../ui/navigation-progress';
 
 interface OrganizerLayoutProps {
   children: ReactNode;
@@ -20,6 +21,9 @@ export default function OrganizerLayout({ children }: OrganizerLayoutProps) {
               <span className="text-lg font-semibold">Event Organizer Dashboard</span>
             </div>
           </header>
+          <Suspense fallback={null}>
+            <NavigationProgress />
+          </Suspense>
           <main className="flex-1">
             {children}
           </main>

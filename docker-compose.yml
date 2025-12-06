@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: e-tiket-backend
+    ports:
+      - "5000:5000"
+    volumes:
+      # Persist uploads folder
+      # Maps ./backend/uploads on host to /usr/src/app/uploads in container
+      - ./backend/uploads:/usr/src/app/uploads
+    environment:
+      - NODE_ENV=production
+      - UPLOAD_PATH=uploads
+      # Add other environment variables here or use env_file
+    restart: unless-stopped

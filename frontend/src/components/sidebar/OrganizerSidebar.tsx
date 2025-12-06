@@ -7,6 +7,10 @@ import {
   Calendar,
   LogOut,
   Loader2,
+  QrCode,
+  Ticket,
+  DollarSign,
+  Users,
 } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '../ui/sidebar';
 import { cn } from '@/lib/utils';
@@ -41,6 +45,15 @@ export default function OrganizerSidebar() {
     return (firstInitial + lastInitial).toUpperCase() || 'EO';
   };
 
+  const isPathActive = (href: string) => {
+    // Exact match for dashboard/management items
+    // if (href.startsWith('/admin/') || href.startsWith('/organizer/')) {
+    //   return pathname === href;
+    // }
+    // Partial match for operational items (checkin, redeem can have dynamic paths)
+    return pathname.startsWith(href);
+  };
+
   const menuItems = [
     {
       name: 'Dashboard',
@@ -51,7 +64,30 @@ export default function OrganizerSidebar() {
       name: 'My Events',
       href: '/organizer/events',
       icon: Calendar,
+    },
+    {
+      name: 'Attendees',
+      href: '/organizer/attendees',
+      icon: Users,
+    },
+    {
+      name: 'Payout',
+      href: '/organizer/payout',
+      icon: DollarSign,
     }
+  ];
+
+  const operationalItems = [
+    {
+      name: 'Check-in',
+      href: '/checkin',
+      icon: QrCode,
+    },
+    {
+      name: 'Redeem',
+      href: '/redeem',
+      icon: Ticket,
+    },
   ];
 
   return (
@@ -63,17 +99,18 @@ export default function OrganizerSidebar() {
           </div>
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold">Organizer Panel</span>
-            <span className="text-xs text-muted-foreground">Event Management</span>
+            <span className="text-xs text-accent-foreground">Event Management</span>
           </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         <div className="px-2 py-2">
+          {/* Management Section */}
           <div className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive = isPathActive(item.href);
 
               return (
                 <Link
@@ -82,8 +119,8 @@ export default function OrganizerSidebar() {
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      ? "bg-accent"
+                      : "hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -91,6 +128,33 @@ export default function OrganizerSidebar() {
                 </Link>
               );
             })}
+          </div>
+
+          {/* Operational Section */}
+          <div className="mt-6 pt-6 border-t border-sidebar-border">
+            <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider">Operasional</p>
+            <div className="space-y-1 mt-2">
+              {operationalItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = isPathActive(item.href);
+
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-primary"
+                        : "hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
       </SidebarContent>

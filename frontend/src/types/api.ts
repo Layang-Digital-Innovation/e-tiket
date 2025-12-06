@@ -1,3 +1,24 @@
+
+import { DeliveryMode, EventType } from ".";
+
+export enum EventTypeApi {
+  CONCERT = 'CONCERT',
+  RUNNING = 'RUNNING',
+  SEMINAR = 'SEMINAR',
+}
+
+export enum DeliveryModeApi {
+  ONLINE = 'online',
+  ONSITE = 'onsite',
+  HYBRID = 'hybrid',
+}
+
+export enum RedeemStrategyApi {
+  WRISTBAND = 'wristband',
+  BIB = 'bib',
+  NONE = 'none',
+}
+
 export interface Event {
   id: string;
   title: string;
@@ -5,6 +26,7 @@ export interface Event {
   startDate: string;
   endDate: string;
   location: string;
+  eventType?: EventTypeApi;
   capacity: number;
   price: number;
   status: 'draft' | 'published' | 'cancelled';
@@ -59,22 +81,6 @@ export interface User {
   updatedAt: string;
 }
 
-export interface ApiResponse<T> {
-  data: T;
-  message?: string;
-  success: boolean;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
 export interface LoginResponse {
   user: User;
   token: string;
@@ -86,7 +92,11 @@ export interface CreateEventRequest {
   startDate: string;
   endDate: string;
   location: string;
+  eventType: EventType;
   imageUrl?: string;
+  termsAndConditions?: string;
+  webinarJoinUrl?: string;
+  deliveryMode: DeliveryMode;
 }
 
 export interface CreateTicketRequest {

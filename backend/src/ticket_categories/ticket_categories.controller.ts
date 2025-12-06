@@ -8,7 +8,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { UserRole } from 'src/users/entities/user.entity';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 
-@Controller('api/ticket-categories')
+@Controller('ticket-categories')
 @AuditController()
 @UseGuards(JwtAuthGuard)
 export class TicketCategoriesController {
@@ -47,5 +47,12 @@ export class TicketCategoriesController {
   @Roles(UserRole.ADMIN, UserRole.EVENT_ORGANIZER)
   remove(@Param('id') id: string) {
     return this.ticketCategoriesService.remove(id);
+  }
+
+  @Patch(':id/toggle-status')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.EVENT_ORGANIZER)
+  toggleTicketStatus(@Param('id') id: string) {
+    return this.ticketCategoriesService.toggleTicketStatus(id);
   }
 }

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
 import { Event, CreateEventRequest, PaginatedResponse } from '@/types';
+import { toast } from 'sonner';
 
 // Query Keys
 export const eventKeys = {
@@ -12,7 +13,7 @@ export const eventKeys = {
   myEventsList: (filters: { page?: number; limit?: number }) =>
     [...eventKeys.myEvents(), filters] as const,
   details: () => [...eventKeys.all, 'detail'] as const,
-  detail: (id: string) => [...eventKeys.details(), id] as const,
+  detail: (slug: string) => [...eventKeys.details(), slug] as const,
 };
 
 // ============================================
@@ -31,7 +32,7 @@ export function useEvents(params?: {
     queryKey: eventKeys.list(params || {}),
     queryFn: async () => {
       const response = await apiService.getEvents(params);
-      return response as PaginatedResponse<Event>;
+      return response as PaginatedResponse<Event[]>;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
@@ -46,7 +47,7 @@ export function useMyEvents(params?: { page?: number; limit?: number }) {
     queryKey: eventKeys.myEventsList(params || {}),
     queryFn: async () => {
       const response = await apiService.getMyEvents(params);
-      return response as PaginatedResponse<Event>;
+      return response as PaginatedResponse<Event[]>;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
@@ -69,6 +70,26 @@ export function useEvent(id: string, enabled = true) {
   });
 }
 
+/**
+ * Get event by slug
+ */
+export function useEventBySlug(slug: string, enabled = true) {
+  return useQuery({
+    queryKey: [...eventKeys.details(), 'slug', slug] as const,
+    queryFn: async () => {
+      const response = await apiService.getEventBySlug(slug);
+      return (response as any).data as Event;
+    },
+    enabled: !!slug && enabled,
+    staleTime: 30 * 1000, // 30 seconds - more frequent updates for ticket availability
+    gcTime: 10 * 60 * 1000, // 10 minutes cache time
+    refetchInterval: 30 * 1000, // Refetch every 30 seconds for real-time availability
+    refetchOnWindowFocus: true, // Update when user returns to tab
+    refetchOnMount: true, // Always refetch on mount
+    refetchIntervalInBackground: false, // Don't refetch when tab is not active
+  });
+}
+
 // ============================================
 // MUTATION HOOKS
 // ============================================
@@ -84,9 +105,13 @@ export function useCreateEvent() {
       return await apiService.createEvent(data);
     },
     onSuccess: () => {
+      toast.success('Event berhasil dibuat!');
       // Invalidate and refetch my events list
       queryClient.invalidateQueries({ queryKey: eventKeys.myEvents() });
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal membuat event: ${error.message || 'Terjadi kesalahan'}`);
     },
   });
 }
@@ -98,15 +123,20 @@ export function useUpdateEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Event> }) => {
+    mutationFn: async ({ id, slug, data }: { id: string; slug: string; data: Partial<Event> }) => {
       return await apiService.updateEvent(id, data);
     },
     onSuccess: (_, variables) => {
+      toast.success('Event berhasil diperbarui!');
       // Invalidate specific event detail
       queryClient.invalidateQueries({ queryKey: eventKeys.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: [...eventKeys.details(), 'slug', variables.slug] });
       // Invalidate lists
       queryClient.invalidateQueries({ queryKey: eventKeys.myEvents() });
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal memperbarui event: ${error.message || 'Terjadi kesalahan'}`);
     },
   });
 }
@@ -122,11 +152,15 @@ export function useDeleteEvent() {
       return await apiService.deleteEvent(id);
     },
     onSuccess: (_, id) => {
+      toast.success('Event berhasil dihapus!');
       // Remove from cache
       queryClient.removeQueries({ queryKey: eventKeys.detail(id) });
       // Invalidate lists
       queryClient.invalidateQueries({ queryKey: eventKeys.myEvents() });
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal menghapus event: ${error.message || 'Terjadi kesalahan'}`);
     },
   });
 }

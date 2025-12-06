@@ -493,7 +493,7 @@ export class EmailService {
                   <p><strong>Butuh Bantuan?</strong></p>
                   <p>Email: support@eventku.com | WhatsApp: +62 821-9999-8888</p>
                   <p style="margin-top: 12px; font-size: 12px; color: #9ca3af;">
-                      © 2025 EventKu. All rights reserved.
+                      2025 EventKu. All rights reserved.
                   </p>
               </div>
           </div>
@@ -570,102 +570,147 @@ export class EmailService {
     return Buffer.from(pdf);
   }
 
-    // Kirim email ringkasan order dengan satu PDF
- async sendOrderSummary(params: {
-  email: string;
-  buyerName: string;
-  transactionCode: string;
-  totalAmount: number;
-  paymentMethod: string;
-  status: string;
-  orderItems: {
-    eventName: string;
-    ticketCategory: string;
-    quantity: number;
-    attendees: {
-      name: string;
-      email: string;
-      phone: string;
-      identityType: string;
-      identityNumber: string;
-      gender?: string;
-      address?: string;
-      birthDate?: string;
+  async sendOrderSummary(params: {
+    email: string;
+    buyerName: string;
+    transactionCode: string;
+    totalAmount: number;
+    paymentMethod: string;
+    status: string;
+    orderItems: {
+      eventName: string;
+      ticketCategory: string;
+      quantity: number;
+      attendees: {
+        name: string;
+        email: string;
+        phone: string;
+        identityType: string;
+        identityNumber: string;
+        gender?: string;
+        address?: string;
+        birthDate?: string;
+      }[];
     }[];
-  }[];
-}) {
-  const { email, buyerName, transactionCode, totalAmount, paymentMethod, status, orderItems } = params;
+  }) {
+    const { email, buyerName, transactionCode, totalAmount, paymentMethod, status, orderItems } = params;
 
-  // Bangun HTML untuk email
-  let itemsHtml = '';
-  orderItems.forEach((item, index) => {
-    let attendeesHtml = '';
-    item.attendees.forEach((att, i) => {
-      attendeesHtml += `
-        <tr>
-          <td>${i + 1}</td>
-          <td>${att.name}</td>
-          <td>${att.email}</td>
-          <td>${att.phone}</td>
-          <td>${att.gender || '-'}</td>
-          <td>${att.birthDate || '-'}</td>
-          <td>${att.identityType}</td>
-          <td>${att.identityNumber}</td>
-          <td>${att.address || '-'}</td>
-        </tr>
+    // Bangun HTML untuk email
+    let itemsHtml = '';
+    orderItems.forEach((item, index) => {
+      let attendeesHtml = '';
+      item.attendees.forEach((att, i) => {
+        attendeesHtml += `
+          <tr>
+            <td>${i + 1}</td>
+            <td>${att.name}</td>
+            <td>${att.email}</td>
+            <td>${att.phone}</td>
+            <td>${att.gender || '-'}</td>
+            <td>${att.birthDate || '-'}</td>
+            <td>${att.identityType}</td>
+            <td>${att.identityNumber}</td>
+            <td>${att.address || '-'}</td>
+          </tr>
+        `;
+      });
+
+      itemsHtml += `
+        <h4>Item ${index + 1}: ${item.eventName} - ${item.ticketCategory}</h4>
+        <p>Quantity: ${item.quantity}</p>
+        <table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse; margin-bottom: 16px; width: 100%;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nama</th>
+              <th>Email</th>
+              <th>Telepon</th>
+              <th>Jenis Kelamin</th>
+              <th>Tanggal Lahir</th>
+              <th>Jenis Identitas</th>
+              <th>No Identitas</th>
+              <th>Alamat</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${attendeesHtml}
+          </tbody>
+        </table>
       `;
     });
 
-    itemsHtml += `
-      <h4>Item ${index + 1}: ${item.eventName} - ${item.ticketCategory}</h4>
-      <p>Quantity: ${item.quantity}</p>
-      <table border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse; margin-bottom: 16px; width: 100%;">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Nama</th>
-            <th>Email</th>
-            <th>Telepon</th>
-            <th>Jenis Kelamin</th>
-            <th>Tanggal Lahir</th>
-            <th>Jenis Identitas</th>
-            <th>No Identitas</th>
-            <th>Alamat</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${attendeesHtml}
-        </tbody>
-      </table>
+    const htmlBody = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; color:#09090b;">
+        <p>Halo <strong>${buyerName}</strong>,</p>
+        <p>Terima kasih atas pembelian tiket Anda. Berikut ringkasan pesanan:</p>
+        <p><strong>Kode Transaksi:</strong> ${transactionCode}</p>
+        <p><strong>Status:</strong> ${status}</p>
+        <p><strong>Total Pembayaran:</strong> Rp ${totalAmount}</p>
+        <p><strong>Metode Pembayaran:</strong> ${paymentMethod}</p>
+        <hr />
+        ${itemsHtml}
+        <p>Silakan cek tiket individual di email masing-masing attendee.</p>
+        <p>Salam,<br/>EventKu Team</p>
+      </div>
     `;
-  });
 
-  const htmlBody = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; color:#09090b;">
-      <p>Halo <strong>${buyerName}</strong>,</p>
-      <p>Terima kasih atas pembelian tiket Anda. Berikut ringkasan pesanan:</p>
-      <p><strong>Kode Transaksi:</strong> ${transactionCode}</p>
-      <p><strong>Status:</strong> ${status}</p>
-      <p><strong>Total Pembayaran:</strong> Rp ${totalAmount}</p>
-      <p><strong>Metode Pembayaran:</strong> ${paymentMethod}</p>
-      <hr />
-      ${itemsHtml}
-      <p>Silakan cek tiket individual di email masing-masing attendee.</p>
-      <p>Salam,<br/>EventKu Team</p>
-    </div>
-  `;
+    const mailOptions = {
+      from: this.configService.get('SMTP_FROM', 'noreply@eventku.com'),
+      to: email,
+      subject: `Ringkasan Pesanan Anda - ${transactionCode}`,
+      html: htmlBody,
+    };
 
-  const mailOptions = {
-    from: this.configService.get('SMTP_FROM', 'noreply@eventku.com'),
-    to: email,
-    subject: `Ringkasan Pesanan Anda - ${transactionCode}`,
-    html: htmlBody,
-  };
+    return this.transporter.sendMail(mailOptions);
+  }
 
-  return this.transporter.sendMail(mailOptions);
-}
+  async sendWebinarAccessEmail(params: {
+    to: string;
+    attendeeName: string;
+    eventTitle: string;
+    startAt?: string | Date;
+    endAt?: string | Date;
+    timezone?: string;
+    webinarJoinUrl: string;
+    webinarNotes?: string;
+  }) {
+    const { to, attendeeName, eventTitle, startAt, endAt, timezone = 'Asia/Jakarta', webinarJoinUrl, webinarNotes } = params;
 
+    const formatDate = (d?: string | Date) => {
+      if (!d) return '';
+      try {
+        const date = typeof d === 'string' ? new Date(d) : d;
+        return date.toLocaleString('id-ID', {
+          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: timezone,
+        });
+      } catch {
+        return String(d ?? '');
+      }
+    };
 
+    const startStr = formatDate(startAt);
+    const endStr = formatDate(endAt);
 
+    const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial; color:#0f172a;">
+      <h2 style="margin:0 0 8px 0;">Akses Webinar Anda</h2>
+      <p style="margin:0 0 16px 0;">Halo <strong>${attendeeName}</strong>,</p>
+      <p style="margin:0 0 8px 0;">Anda terdaftar pada webinar <strong>${eventTitle}</strong>.</p>
+      ${startStr ? `<p style="margin:0 0 4px 0;">Waktu mulai: <strong>${startStr}</strong></p>` : ''}
+      ${endStr ? `<p style="margin:0 0 12px 0;">Waktu selesai: <strong>${endStr}</strong></p>` : ''}
+      <p style="margin:0 12px 16px 0;">Silakan gunakan tautan berikut untuk bergabung saat waktu sudah dimulai:</p>
+      <p style="margin:0 0 16px 0;"><a href="${webinarJoinUrl}" style="background:#1d4ed8;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block;">Gabung Webinar</a></p>
+      <p style="margin:0 0 12px 0; font-size:13px; color:#475569;">Mohon untuk tidak membagikan tautan ini kepada orang lain.</p>
+      ${webinarNotes ? `<div style="margin-top:12px;padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;white-space:pre-wrap;">${webinarNotes}</div>` : ''}
+    </div>`;
 
+    const mailOptions = {
+      from: this.configService.get('SMTP_FROM', 'noreply@ticketing-app.com'),
+      to,
+      subject: `[${eventTitle}] Akses Webinar Anda`,
+      html,
+    };
+
+    return this.transporter.sendMail(mailOptions);
+  }
 }

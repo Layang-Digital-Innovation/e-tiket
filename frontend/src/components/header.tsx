@@ -1,136 +1,63 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { User, LogOut, Settings, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Menu, X } from 'lucide-react';
+import naikKelas from "@/assets/naik_kelas_putih3.png"
+import { Button } from './ui/button';
 
 export default function Header() {
-  const pathname = usePathname();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  const isAdmin = pathname.startsWith('/admin');
-  const isEO = pathname.startsWith('/eo');
-  const isPublic = pathname.startsWith('/event');
-  const isAuthPage = pathname === '/login' || pathname === '/register';
-
-  const handleLogout = async () => {
-    try {
-      setIsDropdownOpen(false);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="bg-gradient-to-b font-heebo from-black/40 to-black/0 fixed w-full z-50">
+    <header className="bg-primary fixed w-full z-50 py-2">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <Link href="/" className="text-xl font-bold font-heebo text-white">
-              eventkadin
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center py-3 sm:py-0">
+          <div className="flex items-center justify-between sm:justify-start">
+            <Link href="/">
+              <Image
+                src={naikKelas}
+                alt="naik kelas"
+                className="object-contain aspect-square"
+                width={50}
+                height={50}
+              />
             </Link>
+            {/* Hamburger button - mobile only */}
+            <button
+              type="button"
+              className="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50"
+              onClick={() => setIsOpen((prev) => !prev)}
+              aria-label="Toggle navigation menu"
+            >
+              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
 
-          <nav className="flex items-center space-x-6">
-            {isAdmin && (
-              <>
-                <Link
-                  href="/admin/dashboard"
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    pathname === '/admin/dashboard'
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/80 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/admin/organizers"
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    pathname === '/admin/organizers'
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/80 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  Event Organizers
-                </Link>
-                <Link
-                  href="/admin/events"
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    pathname === '/admin/events'
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/80 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  Events
-                </Link>
-              </>
-            )}
+          <nav
+            className={`items-center text-sm sm:space-x-6 sm:flex ${
+              isOpen ? 'flex flex-col space-y-2 sm:space-y-0 sm:flex-row mt-2 sm:mt-0' : 'hidden'
+            }`}
+          >
+            <Link
+              href="/events"
+              className="px-3 w-full py-2 rounded-md md:w-auto text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              Jelajahi Event
+            </Link>
 
-            {isEO && (
-              <>
-                <Link
-                  href="/eo/dashboard"
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    pathname === '/eo/dashboard'
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/80 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/eo/events"
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    pathname === '/eo/events'
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/80 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  My Events
-                </Link>
-              </>
-            )}
-
-            {!isAdmin && !isEO && !isPublic && !isAuthPage && (
-              <Link
-                href="/events"
-                className="px-3 py-2 rounded-md text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+         <Button asChild className="bg-white text-primary hover:bg-white/10 w-full md:w-auto">
+<Link
+                href="/login"
               >
-                Jelajahi Event
+                Masuk
               </Link>
-            )}
-
-            {/* Authentication Section */}
-            {
-              !isAuthPage && (
-              <div className="flex items-center space-x-4">
-                <Link
-                  href="/login"
-                  className="px-4 py-2 rounded-md text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-                >
-                  Masuk
-                </Link>
-                <Link
-                  href="/register"
-                  className="px-4 py-2 rounded-md text-sm font-medium bg-white text-gray-900 hover:bg-gray-100 transition-colors"
-                >
-                  Daftar
-                </Link>
-              </div>
-            )}
+         </Button>
+              
           </nav>
         </div>
       </div>
-
-      {/* Click outside to close dropdown */}
-      {isDropdownOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setIsDropdownOpen(false)}
-        />
-      )}
     </header>
   );
 }

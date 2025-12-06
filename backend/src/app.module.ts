@@ -20,6 +20,11 @@ import { PaymentModule } from './payment/payment.module';
 import { BullModule } from '@nestjs/bull';
 import { RedeemModule } from './redeem/redeem.module';
 import { CheckInModule } from './check_in/check_in.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { OrganizerDashboardModule } from './organizer-dashboard/organizer-dashboard.module';
+import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
+import { PayoutModule } from './payout/payout.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -37,7 +42,7 @@ import { CheckInModule } from './check_in/check_in.module';
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_DATABASE'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('NODE_ENV') !== 'production',
+        synchronize: true,
       }),
     }),
     BullModule.forRootAsync({
@@ -47,9 +52,12 @@ import { CheckInModule } from './check_in/check_in.module';
         redis: {
           host: configService.get('REDIS_HOST', 'localhost'),
           port: configService.get('REDIS_PORT', 6379),
+          password: configService.get('REDIS_PASSWORD'),
+          username: configService.get('REDIS_USERNAME'),
         },
       }),
     }),
+    ScheduleModule.forRoot(),
     CommonModule,
     AuthModule.forRoot(),
     UsersModule,
@@ -64,6 +72,10 @@ import { CheckInModule } from './check_in/check_in.module';
     PaymentModule,
     RedeemModule,
     CheckInModule,
+    OrganizerDashboardModule,
+    AdminDashboardModule,
+    PayoutModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

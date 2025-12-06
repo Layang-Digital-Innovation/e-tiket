@@ -27,9 +27,9 @@ import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
 import { UserRole } from 'src/users/entities/user.entity';
 
-@Controller('api/auth')
+@Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -99,13 +99,44 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(@Request() req, @Res() res: Response) {
-    await this.authService.login(req.user, res);
-    // Redirect to frontend - token is now in cookie
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
+    const result = await this.authService.login(req.user, res);
+
+    // Get frontend URL from environment variable
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Dynamic redirect based on Referer/Origin (only in development)
+    const allowedOrigins = isProduction
+      ? [
+        'https://naikkellas.com',
+        'https://www.naikkellas.com'
+      ]
+      : [
+        'http://localhost:3000',
+        'https://naikkellas.com',
+        'https://www.naikkellas.com'
+      ];
+
+    const referer = req.headers.referer;
+    const origin = req.headers.origin;
+
+    let redirectUrl = frontendUrl; // Default to FRONTEND_URL
+
+    // Check if referer or origin matches allowed domains
+    if (referer) {
+      const match = allowedOrigins.find(url => referer.startsWith(url));
+      if (match) redirectUrl = match;
+    } else if (origin) {
+      const match = allowedOrigins.find(url => origin === url);
+      if (match) redirectUrl = match;
+    }
+
+    // Redirect to frontend with token as query parameter for cross-domain compatibility
+    res.redirect(`${redirectUrl}/auth/callback?token=${result.accessToken}`);
   }
 
   @Post('create-admin')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard)
   @Roles(UserRole.ADMIN)
   async createAdmin(@Body(ValidationPipe) createAdminDto: CreateAdminDto) {
     return this.authService.createAdmin(createAdminDto);

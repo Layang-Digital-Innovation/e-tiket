@@ -3,8 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const token = searchParams.get('token');
+  const tokenFromQuery = searchParams.get('token');
+  const tokenFromCookie = request.cookies.get('access_token')?.value;
   const error = searchParams.get('error');
+
+  // Prefer token from query if provided, otherwise fall back to cookie set by backend
+  const token = tokenFromQuery || tokenFromCookie;
 
   // Handle OAuth error
   if (error) {
@@ -25,7 +29,10 @@ export async function GET(request: NextRequest) {
   try {
     // Verify token with backend
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    const response = await axios.get(`${backendUrl}/api/auth/profile`, {
+    console.log('🔐 Verifying token with backend:', backendUrl);
+
+    // Use the token to fetch user profile
+    const response = await axios.get(`${backendUrl}/auth/profile`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -36,47 +43,46 @@ export async function GET(request: NextRequest) {
       throw new Error('Invalid token');
     }
 
-    const payload = response.data
-    const userData = payload.data
+    const payload = response.data;
+    const userData = payload.data;
+    console.log('✅ Token verified, user:', userData.email);
 
-    // Create response with redirect
+    // Determine the correct frontend URL for redirect
+    const isProduction = process.env.NODE_ENV === 'production';
+    const frontendUrl = process.env.NEXT_PUBLIC_APP_URL ||
+      (isProduction ? 'https://naikkellas.com' : 'http://localhost:3000');
+
+    // Create response with redirect to success page
     const redirectResponse = NextResponse.redirect(
-      new URL('/auth/success', request.url)
+      new URL('/auth/success', frontendUrl)
     );
 
-    // Set secure cookies for token and user data
-    const isProduction = process.env.NODE_ENV === 'production';
-    
-    // IMPORTANT: Use 'access_token' to match middleware expectations
-    redirectResponse.cookies.set('access_token', token, {  
-      httpOnly: false, // Allow client-side access for API calls
-      secure: isProduction,
-      sameSite: 'lax',
+    const cookieOptions = {
+      httpOnly: true, // Secure: Client JS cannot read this
+      secure: isProduction, // HTTPS only in production
+      sameSite: 'lax' as const,
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
-    });
+      domain: isProduction ? '.naikkellas.com' : undefined,
+    };
 
-    // Set user role cookie for middleware fallback
-    redirectResponse.cookies.set('user_role', userData.role, {
-      httpOnly: false,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    });
+    // 1. Set access_token (HttpOnly - Security Critical)
+    redirectResponse.cookies.set('access_token', token, cookieOptions);
 
+    // 2. Set user_role (HttpOnly - For Middleware)
+    redirectResponse.cookies.set('user_role', userData.role, cookieOptions);
+
+    // 3. Set userData (NOT HttpOnly - For Client UI State)
+    // This allows the client to know WHO is logged in without exposing the token
     redirectResponse.cookies.set('userData', JSON.stringify(userData), {
-      httpOnly: false, // Allow client-side access
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
+      ...cookieOptions,
+      httpOnly: false,
     });
 
     return redirectResponse;
 
   } catch (error) {
-    console.error('Token verification failed:', error);
+    console.error('❌ Token verification failed:', error);
     return NextResponse.redirect(
       new URL(`/login?error=${encodeURIComponent('Authentication verification failed')}`, request.url)
     );

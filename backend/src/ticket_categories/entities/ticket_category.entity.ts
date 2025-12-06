@@ -28,8 +28,15 @@ export class TicketCategory extends AuditEntity {
     @Index()
     sold: number;
 
+    @Column({ type: 'int', name: 'reserved', default: 0 })
+    @Index()
+    reserved: number;
+
     @ManyToOne(() => Event, { onDelete : "CASCADE"})
     @JoinColumn({ name: 'event_id' })
     event: Event;
+
+    @Column({ type: 'boolean', name: 'is_active', default: true })
+    isActive: boolean;
 
 }

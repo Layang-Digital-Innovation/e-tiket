@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
@@ -11,17 +11,26 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+// Wrapper to ensure useSearchParams is under a Suspense boundary
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isAuthenticated, error: authError, clearError } = useAuth();
-  
+  const { login, isAuthenticated, user, error: authError, clearError } = useAuth();
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
-  
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -30,7 +39,7 @@ export default function LoginPage() {
   useEffect(() => {
     const error = searchParams.get('error');
     const reason = searchParams.get('reason');
-    
+
     if (error) {
       setSubmitError(decodeURIComponent(error));
     } else if (reason === 'session_expired') {
@@ -40,10 +49,16 @@ export default function LoginPage() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/');
+    if (isAuthenticated && user) {
+      // Don't redirect to home - let middleware handle it
+      // Instead, redirect to dashboard directly to avoid being stuck on home
+      if (user.role === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, user, router]);
 
   // Clear auth errors when component unmounts
   useEffect(() => {
@@ -54,7 +69,7 @@ export default function LoginPage() {
 
   // Validation function
   const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
+    const newErrors: { [key: string]: string } = {};
 
     // Email validation
     if (!formData.email) {
@@ -81,7 +96,7 @@ export default function LoginPage() {
       ...prev,
       [name]: value
     }));
-    
+
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
@@ -89,7 +104,7 @@ export default function LoginPage() {
         [name]: ''
       }));
     }
-    
+
     // Clear submit error
     if (submitError) {
       setSubmitError('');
@@ -99,7 +114,7 @@ export default function LoginPage() {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -130,8 +145,8 @@ export default function LoginPage() {
             <CardTitle className="text-2xl font-bold">Masuk ke Akun Anda</CardTitle>
             <CardDescription>
               Atau{' '}
-              <Link 
-                href="/register" 
+              <Link
+                href="/register"
                 className="font-medium text-primary hover:underline"
               >
                 daftar akun baru
@@ -231,8 +246,8 @@ export default function LoginPage() {
                   </Label>
                 </div>
 
-                <Link 
-                  href="/forgot-password" 
+                <Link
+                  href="/forgot-password"
                   className="text-sm font-medium text-primary hover:underline"
                 >
                   Lupa password?
@@ -240,9 +255,9 @@ export default function LoginPage() {
               </div>
 
               {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="w-full" 
+              <Button
+                type="submit"
+                className="w-full"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -273,7 +288,7 @@ export default function LoginPage() {
                 variant="outline"
                 className="w-full"
                 onClick={() => {
-                  window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/google`;
+                  window.location.href = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/auth/google`;
                 }}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -300,8 +315,8 @@ export default function LoginPage() {
 
             {/* Back to Home */}
             <div className="text-center pt-4">
-              <Link 
-                href="/" 
+              <Link
+                href="/"
                 className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
               >
                 ← Kembali ke Beranda

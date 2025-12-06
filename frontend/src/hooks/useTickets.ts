@@ -1,14 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
-import { Ticket, CreateTicketRequest } from '@/types';
+import { TicketCategory, CreateTicketRequest } from '@/types';
+import { toast } from 'sonner';
 
 // Query Keys
-export const ticketKeys = {
-  all: ['tickets'] as const,
-  lists: () => [...ticketKeys.all, 'list'] as const,
-  list: (eventId: string) => [...ticketKeys.lists(), eventId] as const,
-  details: () => [...ticketKeys.all, 'detail'] as const,
-  detail: (id: string) => [...ticketKeys.details(), id] as const,
+export const ticketCategoryKeys = {
+  all: ['ticketCategories'] as const,
+  lists: () => [...ticketCategoryKeys.all, 'list'] as const,
+  list: (eventId: string) => [...ticketCategoryKeys.lists(), eventId] as const,
+  details: () => [...ticketCategoryKeys.all, 'detail'] as const,
+  detail: (id: string) => [...ticketCategoryKeys.details(), id] as const,
 };
 
 // ============================================
@@ -16,14 +17,14 @@ export const ticketKeys = {
 // ============================================
 
 /**
- * Get tickets by event ID
+ * Get ticket categories by event ID
  */
-export function useTickets(eventId: string, enabled = true) {
+export function useTicketCategories(eventId: string, enabled = true) {
   return useQuery({
-    queryKey: ticketKeys.list(eventId),
+    queryKey: ticketCategoryKeys.list(eventId),
     queryFn: async () => {
-      const response = await apiService.getTickets(eventId);
-      return (response as any).data as Ticket[];
+      const response = await apiService.getTicketsCategoryByEventId(eventId);
+      return (response as any).data as TicketCategory[];
     },
     enabled: !!eventId && enabled,
     staleTime: 3 * 60 * 1000, // 3 minutes
@@ -36,70 +37,150 @@ export function useTickets(eventId: string, enabled = true) {
 // ============================================
 
 /**
- * Create new ticket
+ * Create new ticket category
  */
-export function useCreateTicket() {
+export function useCreateTicketCategory() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: CreateTicketRequest) => {
-      return await apiService.createTicket(data);
+      return await apiService.createTicketCategory(data);
     },
     onSuccess: (_, variables) => {
-      // Invalidate tickets list for this event
+      toast.success('Kategori tiket berhasil dibuat!');
+      // Invalidate ticket categories list for this event
       if (variables.eventId) {
         queryClient.invalidateQueries({
-          queryKey: ticketKeys.list(variables.eventId),
+          queryKey: ticketCategoryKeys.list(variables.eventId),
         });
       }
-      // Invalidate all tickets lists
-      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+      // Invalidate all ticket categories lists
+      queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.lists() });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal membuat kategori tiket: ${error.message || 'Terjadi kesalahan'}`);
     },
   });
 }
 
 /**
- * Update ticket
+ * Update ticket category
  */
-export function useUpdateTicket() {
+export function useUpdateTicketCategory() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({
       id,
+      eventId,
       data,
     }: {
       id: string;
-      data: Partial<Ticket>;
+      eventId: string;
+      data: Partial<TicketCategory>;
     }) => {
-      return await apiService.updateTicket(id, data);
+      return await apiService.updateTicketCategory(id, data);
     },
     onSuccess: (response, variables) => {
-      // Invalidate specific ticket detail
-      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(variables.id) });
-      
-      // Invalidate all tickets lists
-      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+      toast.success('Kategori tiket berhasil diperbarui!');
+      // Invalidate specific ticket category detail
+      queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.detail(variables.id) });
+
+      // Invalidate ticket categories list for this event
+      if (variables.eventId) {
+        queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.list(variables.eventId) });
+      }
+
+      // Invalidate all ticket categories lists
+      queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.lists() });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal memperbarui kategori tiket: ${error.message || 'Terjadi kesalahan'}`);
     },
   });
 }
 
 /**
- * Delete ticket
+ * Delete ticket category
  */
-export function useDeleteTicket() {
+export function useDeleteTicketCategory() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      return await apiService.deleteTicket(id);
+      return await apiService.deleteTicketCategory(id);
     },
     onSuccess: (_, id) => {
+      toast.success('Kategori tiket berhasil dihapus!');
       // Remove from cache
-      queryClient.removeQueries({ queryKey: ticketKeys.detail(id) });
-      
-      // Invalidate all tickets lists
-      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+      queryClient.removeQueries({ queryKey: ticketCategoryKeys.detail(id) });
+
+      // Invalidate all ticket categories lists
+      queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.lists() });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal menghapus kategori tiket: ${error.message || 'Terjadi kesalahan'}`);
+    },
+  });
+}
+
+/**
+ * Toggle ticket category status
+ */
+export function useToggleTicketCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return await apiService.toggleTicketCategoryStatus(id);
+    },
+    onSuccess: (_, id) => {
+      toast.success('Status kategori tiket berhasil diubah!');
+      // Invalidate specific ticket category detail
+      queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.detail(id) });
+
+      // Invalidate all ticket categories lists
+      queryClient.invalidateQueries({ queryKey: ticketCategoryKeys.lists() });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal mengubah status kategori tiket: ${error.message || 'Terjadi kesalahan'}`);
+    },
+  });
+}
+
+/**
+ * Create bulk tickets manually
+ */
+export function useCreateBulkTicket() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      categoryId,
+      attendees,
+      eventSlug
+    }: {
+      categoryId: string;
+      attendees: any[];
+      eventSlug: string;
+    }) => {
+      return await apiService.createManualTicket({ categoryId, attendees });
+    },
+    onSuccess: (_, variables) => {
+      toast.success('Tiket berhasil dibuat!');
+
+      // Invalidate attendees queries for this event
+      queryClient.invalidateQueries({
+        queryKey: ['attendees', 'event', variables.eventSlug]
+      });
+
+      // Invalidate ticket categories to update sold count
+      queryClient.invalidateQueries({
+        queryKey: ticketCategoryKeys.lists()
+      });
+    },
+    onError: (error: any) => {
+      toast.error(`Gagal membuat tiket: ${error.message || 'Terjadi kesalahan'}`);
     },
   });
 }

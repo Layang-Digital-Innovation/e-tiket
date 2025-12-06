@@ -20,11 +20,11 @@ export class Order {
     @Column()
     email: string;
 
-    @Column({name : "identity_type"})
-    identityType: string;
+    @Column({name : "identity_type", nullable : true})
+    identityType?: string;
 
-    @Column({name : "identity_number"})
-    identityNumber: string;
+    @Column({name : "identity_number", nullable : true})
+    identityNumber?: string;
 
     @Column({name : "phone_number"})
     phoneNumber: string;

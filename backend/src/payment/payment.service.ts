@@ -11,8 +11,13 @@ import { Order, OrderStatus } from 'src/order/entities/order.entity';
 import { CreateOrderItemDto } from 'src/order_item/dto/create-order_item.dto';
 import { Ticket } from 'src/ticket/entities/ticket.entity';
 import { TicketService } from 'src/ticket/ticket.service';
+import { TicketCategory } from 'src/ticket_categories/entities/ticket_category.entity';
 import { DataSource } from 'typeorm';
 import { EmailQueueService } from 'src/email/email-queue.service';
+import { DeliveryMode } from 'src/events/entities/event.entity';
+import type { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bull';
+import type { ExpireOrderJobData } from 'src/order/order-expiration.processor';
 
 interface CreateInvoiceParams {
   external_id: string;
@@ -70,16 +75,21 @@ export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
   private readonly xenditPublicKey: string;
   private readonly xenditSecretKey: string;
+  private frontendUrl: string;
   constructor(
     private configService: ConfigService,
     private readonly ticketService: TicketService,
     private readonly emailQueueService: EmailQueueService,
     private readonly dataSource: DataSource,
+    @InjectQueue('order-expiration')
+    private readonly orderExpirationQueue: Queue<ExpireOrderJobData>,
   ) {
     this.xenditPublicKey =
       this.configService.get<string>('XENDIT_PUBLIC_KEY') ?? '';
     this.xenditSecretKey =
       this.configService.get<string>('XENDIT_SECRET_KEY') ?? '';
+    this.frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
   }
 
   async createInvoice(params: CreateInvoiceParams) {
@@ -119,8 +129,8 @@ export class PaymentService {
         channel_properties: {},
         mode: 'PAYMENT_LINK',
         items,
-        success_redirect_url: 'https://xendit.co/id/success',
-        failure_redirect_url: 'https://xendit.co/id/failure',
+        success_redirect_url: `${this.frontendUrl}/payment/success?order_id=${external_id}`,
+        failure_redirect_url: `${this.frontendUrl}/payment/failure?order_id=${external_id}`,
       };
 
       this.logger.log(`Payload: ${JSON.stringify(payload)}`);
@@ -174,24 +184,37 @@ async handlePaymentSuccess(callbackData: CallbackSuccessDto) {
       throw new BadRequestException(`Invalid payment status: ${callbackData.status}`);
     }
 
-    // 1️⃣ Cari order lengkap
+    // 1️⃣ Cari dan lock order terlebih dahulu
     const order = await queryRunner.manager.findOne(Order, {
       where: { transactionCode: callbackData.external_id },
+      lock: { mode: 'pessimistic_write' },
+    });
+
+    if (!order) throw new NotFoundException('Order not found');
+
+    this.logger.log(`Processing payment for order: ${callbackData.external_id}`);
+
+   // Idempotency check
+if (order.status === OrderStatus.PAID && order.paymentId === callbackData.payment_id) {
+  this.logger.warn(`Duplicate webhook ignored for order ${callbackData.external_id}`);
+  return order;
+}
+
+    // Load relations setelah order di-lock
+    const orderWithRelations = await queryRunner.manager.findOne(Order, {
+      where: { id: order.id },
       relations: [
         'orderItems',
         'orderItems.ticketCategory',
         'orderItems.ticketCategory.event',
-        'orderItems.attendees', 
+        'orderItems.attendees',
       ],
     });
 
-    this.logger.log(`Processing payment for order: ${callbackData.external_id}`);
+    if (!orderWithRelations) throw new NotFoundException('Order not found');
 
-    if (!order) throw new NotFoundException('Order not found');
-    if (order.status === OrderStatus.PAID) {
-      this.logger.warn(`Order ${callbackData.external_id} already paid`);
-      throw new BadRequestException('Order already paid');
-    }
+    // Gunakan object dengan relations untuk processing
+    Object.assign(order, orderWithRelations);
 
     // 2️⃣ Update status order
     order.status = OrderStatus.PAID;
@@ -201,13 +224,45 @@ async handlePaymentSuccess(callbackData: CallbackSuccessDto) {
     order.paidAt = callbackData.paid_at ? new Date(callbackData.paid_at) : new Date();
     await queryRunner.manager.save(order);
 
+    // Cancel the expiration job since order is now paid
+    try {
+      const jobs = await this.orderExpirationQueue.getJobs(['delayed', 'waiting', 'active']);
+      const expirationJob = jobs.find(job => job.data.orderId === order.id);
+      if (expirationJob) {
+        await expirationJob.remove();
+        this.logger.log(`Cancelled expiration job for paid order ${order.id}`);
+      }
+    } catch (jobError) {
+      this.logger.warn(`Failed to cancel expiration job for order ${order.id}:`, jobError);
+      // Don't fail payment processing if job cancellation fails
+    }
+
     // 3️⃣ Update stok tiket & collect tickets to generate
     const allTicketsToSave: Ticket[] = [];
     for (const item of order.orderItems) {
-      const category = item.ticketCategory;
+      const category = await queryRunner.manager.findOne(TicketCategory, {
+        where: { id: item.ticketCategory.id },
+        lock: { mode: 'pessimistic_write' },
+      });
 
-      // update sold count
+      if (!category) {
+        throw new NotFoundException(`Ticket category ${item.ticketCategory.id} not found`);
+      }
+
+      // Move from reserved to sold
+      category.reserved -= item.quantity;
+      
+      const remaining = category.maxQuantity - category.sold;
+      if (item.quantity > remaining) {
+        throw new BadRequestException(
+          `Not enough tickets available. Remaining: ${remaining}, requested: ${item.quantity}`,
+        );
+      }
       category.sold += item.quantity;
+      
+      // Prevent negative reserved (safety check)
+      if (category.reserved < 0) category.reserved = 0;
+      
       await queryRunner.manager.save(category);
 
       // collect tickets untuk tiap attendee
@@ -215,7 +270,7 @@ async handlePaymentSuccess(callbackData: CallbackSuccessDto) {
         const attendee = item.attendees[i];
         const ticket = queryRunner.manager.create(Ticket, {
           orderItem: item,
-          ticketCategory: category,
+          category,
           order,
           attendee,
         });
@@ -255,6 +310,22 @@ async handlePaymentSuccess(callbackData: CallbackSuccessDto) {
         attendeeIdentityType: ticket.attendee.identityType,
         attendeeIdentityNumber: ticket.attendee.identityNumber,
       });
+    }
+
+    // 5.1️⃣ Enqueue Webinar Access email (Phase 1) for ONLINE events with join URL
+    for (const ticket of allTicketsToSave) {
+      const event = ticket.orderItem.ticketCategory.event;
+      const attendee = ticket.attendee;
+      if (event && event.deliveryMode === DeliveryMode.ONLINE && event.webinarJoinUrl && attendee?.email) {
+        await this.emailQueueService.addWebinarAccessEmail({
+          to: attendee.email,
+          attendeeName: attendee.fullName ?? '',
+          eventTitle: event.title ?? 'Webinar',
+          startAt: event.startDate,
+          endAt: event.endDate,
+          webinarJoinUrl: event.webinarJoinUrl,
+        });
+      }
     }
 
     // 6️⃣ Send order summary email via queue (after transaction)
@@ -304,8 +375,4 @@ async handlePaymentSuccess(callbackData: CallbackSuccessDto) {
     await queryRunner.release();
   }
 }
-
-
-
- 
 }

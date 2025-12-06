@@ -1,14 +1,29 @@
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModuleOptions } from '@nestjs/bull';
+import { Logger } from '@nestjs/common';
 
 export const getBullConfig = (
   configService: ConfigService,
 ): BullModuleOptions => {
+  const logger = new Logger('BullConfig');
+
+  const host = configService.get('REDIS_HOST', 'localhost');
+  const port = configService.get('REDIS_PORT', 6379);
+  const password = configService.get<string | undefined>('REDIS_PASSWORD');
+  const username = configService.get<string | undefined>('REDIS_USERNAME');
+
+  logger.log(
+    `Initializing Bull Redis connection to ${host}:${port}${password ? ' (with auth)' : ''}`,
+  );
+
   return {
     redis: {
-      host: configService.get('REDIS_HOST', 'localhost'),
-      port: configService.get('REDIS_PORT', 6379),
+      host,
+      port,
+      ...(password ? { password } : {}),
+      ...(username ? { username } : {}),
     },
+
     defaultJobOptions: {
       attempts: 3,
       backoff: {
