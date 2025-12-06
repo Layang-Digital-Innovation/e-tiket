@@ -2,8 +2,8 @@ name: Build and Push Frontend
 
 on:
   push:
-    branches: [ "feat/*", "fix/*", "refactor/*", "perf/*", "test/*", "chore/*", "docs/*", "style/*", "ci/*", "build/*", "release/*" ]
-    paths: [ "frontend/**" ]
+    branches: [ "main" ]
+    # paths: [ "frontend/**" ] # Optional: Only trigger when frontend changes
 
 jobs:
   build:
