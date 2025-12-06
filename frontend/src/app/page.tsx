@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { Calendar, Ticket, Users, Star, ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 import HeroSlider from "@/components/HeroSlider";
 import PublicLayout from "@/components/layouts/PublicLayout";
 import { HomeEventsCarousel } from "@/components/events/HomeEventsCarousel";
