@@ -2,7 +2,7 @@ name: Build and Push Frontend
 
 on:
   push:
-    branches: [ "feat/*", "fix/*", "refactor/*", "perf/*", "test/*", "chore/*", "docs/*", "style/*", "ci/*", "build/*", "release/*" ]
+    branches: [ "main" ]
     paths: [ "frontend/**" ]
 
 jobs:
