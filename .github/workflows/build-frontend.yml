@@ -3,7 +3,7 @@ name: Build and Push Frontend
 on:
   push:
     branches: [ "main" ]
-    paths: [ "frontend/**" ]
+    # paths: [ "frontend/**" ] # Optional: Only trigger when frontend changes
 
 jobs:
   build:
