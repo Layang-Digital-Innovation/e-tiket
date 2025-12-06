@@ -24,7 +24,7 @@ export default function Header() {
                 height={50}
               />
             </Link>
-            {/* Hamburger button - mobile only */}
+            {/* Hamburger button - mobile only  */}
             <button
               type="button"
               className="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50"
