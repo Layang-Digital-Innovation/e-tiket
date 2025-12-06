@@ -54,7 +54,7 @@ export interface Event {
   webinarJoinUrl?: string;
   deliveryMode?: DeliveryMode;
   isActive: boolean;
-  status?: 'published' | 'draft' | 'cancelled' ;
+  status?: 'published' | 'draft' | 'cancelled';
   organizerId: string;
   organizer?: EventOrganizer;
   ticketCategories?: TicketCategory[];
@@ -165,7 +165,7 @@ export interface PurchaseTicketRequest {
 }
 
 // Order Types
-  export interface AttendeeDetail {
+export interface AttendeeDetail {
   fullName: string;
   email: string;
   phoneNumber: string;
@@ -199,7 +199,7 @@ export interface AttendeeData {
   phone: string;
   gender?: string;
   dateOfBirth?: string;
-  address?:string;
+  address?: string;
   identityType?: string;
   identityNumber?: string;
   ticketCategoryId: string;
@@ -296,31 +296,10 @@ export interface RedeemResponse {
 
 // Check-in Types
 export interface CheckInRequest {
+  code?: string; // Unified code parameter (backend determines type)
   wristbandCode?: string; // Legacy compatibility
   itemCode?: string; // For WRISTBAND/BIB strategies
   ticketCode?: string; // For NONE strategy
-}
-
-export interface CheckInResponse {
-  message: string;
-  wristbandCode?: string; // Legacy compatibility
-  itemCode?: string; // For WRISTBAND/BIB strategies
-  ticketCode: string;
-  checkedInAt: string;
-}
-
-// Wristband Types
-export interface Wristband {
-  id: string;
-  wristbandCode: string;
-  status: 'unused' | 'assigned' | 'checked_in';
-  assignedAt?: string;
-  checkedInAt?: string;
-  assignedTicket?: Ticket;
-  event?: Event;
-  category?: TicketCategory;
-  createdAt: string;
-  updatedAt: string;
 }
 
 // Ticket Types
@@ -383,4 +362,49 @@ export interface ApprovePayoutRequest {
 
 export interface RejectPayoutRequest {
   rejectionReason: string;
+}
+
+// Additional types for Wristband, CheckIn, and Redeem
+export interface Wristband {
+  id: string;
+  wristbandCode?: string;
+  status: 'unused' | 'assigned' | 'checked_in';
+  event?: Event;
+  category?: TicketCategory;
+  assignedTicket?: Ticket;
+  assignedAt?: string;
+  checkedInAt?: string;
+}
+
+export interface CheckInResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    message: string;
+    itemCode?: string;
+    ticketCode: string;
+    checkedInAt: string;
+    assignedTicket?: {
+      ticketCode: string;
+      attendee: Attendee;
+      category: TicketCategory;
+    };
+  };
+  statusCode: number;
+  
+  // For backward compatibility
+  itemCode?: string;
+  ticketCode?: string;
+  checkedInAt?: string;
+  assignedTicket?: {
+    ticketCode: string;
+    attendee: Attendee;
+    category: TicketCategory;
+  };
+}
+
+export interface RedeemResponse {
+  success: boolean;
+  message: string;
+  data?: any;
 }

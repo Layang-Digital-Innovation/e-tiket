@@ -14,7 +14,7 @@ import client2 from "@/assets/client1.jpg";
 import client3 from "@/assets/client2.jpg";
 import client4 from "@/assets/client3.jpg";
 import client5 from "@/assets/client4.jpg";
-import naikKelas from "@/assets/naik_kelas_putih.png"
+import naikKelas from "@/assets/naik_kelas_putih3.png"
 
 export default async function Home() {
   const heroImages = [
@@ -209,7 +209,7 @@ export default async function Home() {
             <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
               <div>
                 <div className="mb-4">
-                  <Image src={naikKelas} alt="naikkelas" width={200} height={200} />
+                  <Image src={naikKelas} alt="naikkelas" width={100} height={100} />
                 </div>
                 <p className="text-gray-400">
                   media pengusaha muda untuk tumbuh naik kelas

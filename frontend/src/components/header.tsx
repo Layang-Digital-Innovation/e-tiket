@@ -4,14 +4,14 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
-import naikKelas from "@/assets/naik_kelas_putih.png"
+import naikKelas from "@/assets/naik_kelas_putih3.png"
 import { Button } from './ui/button';
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="bg-primary fixed w-full z-50">
+    <header className="bg-primary fixed w-full z-50 py-2">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center py-3 sm:py-0">
           <div className="flex items-center justify-between sm:justify-start">
@@ -19,8 +19,9 @@ export default function Header() {
               <Image
                 src={naikKelas}
                 alt="naik kelas"
-                width={100}
-                height={100}
+                className="object-contain aspect-square"
+                width={50}
+                height={50}
               />
             </Link>
             {/* Hamburger button - mobile only */}

@@ -14,7 +14,7 @@ export class CheckInController {
     constructor(
         private readonly checkInService: CheckInService,
         private readonly eventsService: EventsService,
-    ) {}
+    ) { }
 
     @Get()
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,16 +27,10 @@ export class CheckInController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.ADMIN, UserRole.EVENT_ORGANIZER)
     async checkIn(@Body() checkInDto: CheckInDto, @Request() req) {
-        // For wristband check-in, verify organizer authorization
-        if (checkInDto.wristbandCode) {
-            const wristband = await this.checkInService.getWristbandWithEvent(checkInDto.wristbandCode);
-            
-            if (req.user.role !== UserRole.ADMIN && wristband.event.organizer.id !== req.user.id) {
-                throw new ForbiddenException('You can only check-in wristbands for your own events');
-            }
-        }
-        
-        return this.checkInService.checkIn(checkInDto);
+        // Pass organizerId to service for ownership verification
+        // If user is ADMIN, do not enforce ownership check (pass undefined)
+        const organizerId = req.user.role === UserRole.ADMIN ? undefined : req.user.id;
+        return this.checkInService.checkIn(checkInDto, organizerId);
     }
 
     @Get('event/:eventId')
@@ -53,9 +47,27 @@ export class CheckInController {
                 throw new ForbiddenException('You can only view check-in list for your own events');
             }
         }
-        
+
         return this.checkInService.findAllCheckInListByEvent(eventId);
     }
 
-  
+    @Get('event-slug/:eventSlug')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN, UserRole.EVENT_ORGANIZER)
+    async findAllCheckInListByEventSlug(
+        @Param('eventSlug') eventSlug: string,
+        @Request() req,
+    ) {
+        // Verify organizer can only view check-in list for their own events
+        if (req.user.role !== UserRole.ADMIN) {
+            const event = await this.eventsService.findBySlug(eventSlug);
+            if (event.organizer.id !== req.user.id) {
+                throw new ForbiddenException('You can only view check-in list for your own events');
+            }
+        }
+
+        return this.checkInService.findAllCheckInListByEventSlug(eventSlug);
+    }
+
+
 }

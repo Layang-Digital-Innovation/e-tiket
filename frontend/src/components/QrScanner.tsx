@@ -34,16 +34,24 @@ export default function QrScanner({ onScan, onClose, isOpen, label = 'Scan QR Co
       setError('');
       setIsScanning(true);
 
+      // Wait for DOM to update to ensure the scanner container is rendered
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Check if element exists
+      if (!document.getElementById(qrCodeRegionId)) {
+        throw new Error('Scanner element not found');
+      }
+
       // Create scanner instance
       scannerRef.current = new Html5Qrcode(qrCodeRegionId);
 
       // Get camera devices
       const devices = await Html5Qrcode.getCameras();
-      
+
       if (devices && devices.length > 0) {
         // Prefer back camera if available
-        const backCamera = devices.find(device => 
-          device.label.toLowerCase().includes('back') || 
+        const backCamera = devices.find(device =>
+          device.label.toLowerCase().includes('back') ||
           device.label.toLowerCase().includes('rear')
         );
         const cameraId = backCamera ? backCamera.id : devices[0].id;
@@ -84,7 +92,8 @@ export default function QrScanner({ onScan, onClose, isOpen, label = 'Scan QR Co
     return () => {
       stopScanner();
     };
-  }, [isOpen, isScanning, startScanner, stopScanner]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const handleClose = async () => {
     await stopScanner();

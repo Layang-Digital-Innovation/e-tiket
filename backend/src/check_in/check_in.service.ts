@@ -20,17 +20,17 @@ export class CheckInService {
    * Check-in berdasarkan strategi redeem
    * Support: code (universal), itemCode (WRISTBAND/BIB), ticketCode (NONE)
    */
-  async checkIn(checkInDto: CheckInDto) {
+  async checkIn(checkInDto: CheckInDto, organizerId?: string) {
     // New unified approach - smart detection
     if (checkInDto.code) {
-      return this.checkInByCode(checkInDto.code);
+      return this.checkInByCode(checkInDto.code, organizerId);
     }
 
     // Legacy support - specific code types
     if (checkInDto.itemCode) {
-      return this.checkInByItemCode(checkInDto.itemCode);
+      return this.checkInByItemCode(checkInDto.itemCode, organizerId);
     } else if (checkInDto.ticketCode) {
-      return this.checkInByTicketCode(checkInDto.ticketCode);
+      return this.checkInByTicketCode(checkInDto.ticketCode, organizerId);
     } else {
       throw new BadRequestException('Must provide code, itemCode, or ticketCode');
     }
@@ -39,7 +39,7 @@ export class CheckInService {
   /**
    * Smart code detection - tries itemCode first, then ticketCode
    */
-  async checkInByCode(code: string) {
+  async checkInByCode(code: string, organizerId?: string) {
     return this.dataSource.transaction(async (manager) => {
       // Try as itemCode first (for CONCERT/RUNNING with wristband/BIB)
       const redeemItem = await manager.getRepository(RedeemItem).findOne({
@@ -48,23 +48,23 @@ export class CheckInService {
 
       if (redeemItem) {
         // Found as itemCode, use itemCode check-in flow
-        return this.checkInByItemCode(code);
+        return this.checkInByItemCode(code, organizerId);
       }
 
       // Not found as itemCode, try as ticketCode (for SEMINAR)
-      return this.checkInByTicketCode(code);
+      return this.checkInByTicketCode(code, organizerId);
     });
   }
 
   /**
    * Check-in berdasarkan itemCode (untuk WRISTBAND/BIB strategy)
    */
-  async checkInByItemCode(itemCode: string) {
+  async checkInByItemCode(itemCode: string, organizerId?: string) {
     return this.dataSource.transaction(async (manager) => {
       // 1️⃣ Cari redeem item berdasarkan itemCode
       const redeemItem = await manager.getRepository(RedeemItem).findOne({
         where: { itemCode },
-        relations: ['ticket', 'ticket.attendee', 'ticket.category']
+        relations: ['ticket', 'ticket.attendee', 'ticket.category', 'ticket.category.event', 'ticket.category.event.organizer']
       });
 
       if (!redeemItem) {
@@ -73,6 +73,14 @@ export class CheckInService {
 
       if (!redeemItem.ticket) {
         throw new BadRequestException('Redeem item not assigned to any ticket');
+      }
+
+      // 🔒 Authorization Check
+      if (organizerId) {
+        const eventOrganizerId = redeemItem.ticket.category?.event?.organizer?.id;
+        if (eventOrganizerId && eventOrganizerId !== organizerId) {
+          throw new BadRequestException('You can only check-in attendees for your own events');
+        }
       }
 
       if (redeemItem.status === RedeemItemStatus.CHECKED_IN) {
@@ -113,16 +121,24 @@ export class CheckInService {
   /**
    * Check-in berdasarkan ticketCode (untuk NONE strategy)
    */
-  async checkInByTicketCode(ticketCode: string) {
+  async checkInByTicketCode(ticketCode: string, organizerId?: string) {
     return this.dataSource.transaction(async (manager) => {
       // 1️⃣ Cari tiket berdasarkan ticketCode dengan relations
       const ticket = await manager.getRepository('Ticket').findOne({
         where: { ticketCode },
-        relations: ['attendee', 'category'],
+        relations: ['attendee', 'category', 'category.event', 'category.event.organizer'],
       });
 
       if (!ticket) {
         throw new NotFoundException('Ticket not found');
+      }
+
+      // 🔒 Authorization Check
+      if (organizerId) {
+        const eventOrganizerId = ticket.category?.event?.organizer?.id;
+        if (eventOrganizerId && eventOrganizerId !== organizerId) {
+          throw new BadRequestException('You can only check-in attendees for your own events');
+        }
       }
 
       if (ticket.status === TicketStatus.CHECKED_IN) {
@@ -208,6 +224,10 @@ export class CheckInService {
 
   async findAllCheckInListByEvent(eventId: string) {
     return this.wristbandService.findCheckedInWristbandByEventId(eventId);
+  }
+
+  async findAllCheckInListByEventSlug(eventSlug: string) {
+    return this.wristbandService.findCheckedInWristbandByEvent(eventSlug);
   }
 
   /**

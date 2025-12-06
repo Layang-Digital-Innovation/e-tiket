@@ -117,19 +117,69 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
     }
 
     try {
-      // ✅ Simplified! Just send code, backend will detect the type
-      const result = await checkInMutation.mutateAsync({ code: trimmedCode } as any);
+      // Send the code to the backend
+      const result = await checkInMutation.mutateAsync({ code: trimmedCode });
+
+      // Debug: Log the result to see what we're getting
+      console.log('🎫 Check-in result:', result);
+      console.log('🎫 Assigned ticket:', result?.assignedTicket);
 
       // Success handling with animation
       setShowSuccessAnimation(true);
-      setLastCheckedInAttendee(result);
+
+      // Extract data from the response
+      const responseData = result.data || result; // Handle both response formats
+
+      // Safely extract attendee data with proper null checks
+      const assignedTicket = responseData.assignedTicket || {
+        ticketCode: '',
+        attendee: {
+          id: '',
+          fullName: 'Peserta',
+          email: '',
+          phoneNumber: ''
+        },
+        category: {
+          name: 'General'
+        }
+      };
+
+      // Format the attendee data for display
+      const attendeeData = {
+        id: assignedTicket.attendee?.id || '',
+        fullName: assignedTicket.attendee?.fullName || 'Peserta',
+        email: assignedTicket.attendee?.email || '',
+        phoneNumber: assignedTicket.attendee?.phoneNumber || assignedTicket.attendee?.phoneNumber || '',
+        ticketCode: responseData.ticketCode || assignedTicket.ticketCode || '',
+        checkedInAt: responseData.checkedInAt || new Date().toISOString(),
+        ticketType: assignedTicket.category?.name || 'General',
+      };
+
+      console.log('📝 Formatted attendee data:', attendeeData);
+
+      setLastCheckedInAttendee(attendeeData);
+
+      // Show success message with attendee name
+      const attendeeName = attendeeData.fullName;
+      setSuccessMessage(`✅ Check-in berhasil untuk ${attendeeName}`);
+
+      console.log('✅ Last checked-in attendee set:', attendeeData);
 
       // Add to recent check-ins
       const newCheckIn: RecentCheckIn = {
-        ...result,
+        ...attendeeData,
         timestamp: new Date(),
       } as any;
       setRecentCheckIns(prev => [newCheckIn, ...prev].slice(0, 5));
+
+      // Clear input field
+      setCodeInput('');
+
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => {
+        setShowSuccessAnimation(false);
+        setSuccessMessage('');
+      }, 5000);
 
       // Vibrate on mobile
       if (navigator.vibrate) {
@@ -137,15 +187,16 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
       }
 
       toast.success('Check-in berhasil!', {
-        description: `${result.ticketCode} - ${result.checkedInAt ? format(new Date(result.checkedInAt), 'HH:mm:ss', { locale: id }) : format(new Date(), 'HH:mm:ss', { locale: id })}`,
+        description: `${attendeeData.ticketCode} - ${format(new Date(attendeeData.checkedInAt), 'HH:mm:ss', { locale: id })}`,
       });
 
-      // Auto-clear after 2 seconds
+      // Auto-clear after 3 seconds (but keep lastCheckedInAttendee visible)
       setTimeout(() => {
-        setShowSuccessAnimation(false);
+        // setShowSuccessAnimation(false); // Removed to keep modal open
         setCodeInput('');
-        setLastCheckedInAttendee(null);
-      }, 2000);
+        setSuccessMessage('');
+        // Don't clear lastCheckedInAttendee - let it stay visible
+      }, 3000);
 
       // Refresh data
       refreshCheckInData();
@@ -170,16 +221,13 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
 
   const isConcertOrRunning =
     eventDetail?.eventType === EventType.CONCERT || eventDetail?.eventType === EventType.RUNNING;
-  const isSeminar = eventDetail?.eventType === EventType.SEMINAR;
 
   const wristbandsToDisplay = eventCheckInData;
-  const isLoadingData = isLoadingEventData || isLoadingEventDetail;
 
   const readyToCheckIn = Array.isArray(wristbandsToDisplay) ? wristbandsToDisplay.filter((w) => w.status === 'assigned') : [];
   const checkedIn = Array.isArray(wristbandsToDisplay) ? wristbandsToDisplay.filter((w) => w.status === 'checked_in') : [];
 
   const totalAttendees = readyToCheckIn.length + checkedIn.length;
-  const checkInPercentage = totalAttendees > 0 ? Math.round((checkedIn.length / totalAttendees) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50">
@@ -198,9 +246,6 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
               <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent mb-2">
                 Check-in Peserta
               </h1>
-              <p className="text-gray-600">
-                {eventDetail?.title || 'Loading...'}
-              </p>
             </div>
             {eventSlug && (
               <Badge variant="outline" className="text-sm font-mono">
@@ -315,7 +360,7 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
                           </div>
                           <div>
                             <p className="font-semibold text-gray-900 text-sm">
-                              {checkIn.assignedTicket?.attendee?.fullName || 'Unknown'}
+                              {lastCheckedInAttendee?.fullName || 'Unknown'}
                             </p>
                             <p className="text-xs text-gray-600 font-mono">{checkIn.wristbandCode}</p>
                           </div>
@@ -335,104 +380,69 @@ export default function CheckInPage({ params }: { params: Promise<{ eventId: str
               )}
             </div>
           </div>
-
-          {/* Wristband List */}
-          <div className="lg:col-span-1">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white sticky top-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Status List</h2>
-                <Badge variant="outline" className="text-xs">
-                  {wristbandsToDisplay.length} total
-                </Badge>
-              </div>
-
-              {isLoadingData ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
-                </div>
-              ) : wristbandsToDisplay.length === 0 ? (
-                <div className="text-center py-12">
-                  <Watch className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 text-sm">Belum ada data</p>
-                </div>
-              ) : (
-                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                  {/* Checked In */}
-                  {checkedIn.length > 0 && (
-                    <div>
-                      <h3 className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-2 uppercase tracking-wide">
-                        <CheckCircle className="w-3 h-3 text-emerald-600" />
-                        Checked In ({checkedIn.length})
-                      </h3>
-                      <div className="space-y-2">
-                        {checkedIn.slice(0, 10).map((wristband) => (
-                          <div
-                            key={wristband.id}
-                            onClick={() => setSelectedWristband(wristband)}
-                            className="p-3 bg-gradient-to-r from-emerald-50 to-emerald-100 border border-emerald-200 rounded-lg hover:shadow-md transition-all cursor-pointer group"
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <p className="font-mono text-xs font-semibold text-gray-900">{wristband.wristbandCode}</p>
-                              <CheckCircle className="w-4 h-4 text-emerald-600" />
-                            </div>
-                            {wristband.checkedInAt && (
-                              <p className="text-xs text-gray-600">
-                                {format(new Date(wristband.checkedInAt), 'HH:mm', { locale: id })}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Ready to Check-in */}
-                  {readyToCheckIn.length > 0 && (
-                    <div>
-                      <h3 className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-2 uppercase tracking-wide">
-                        <Clock className="w-3 h-3 text-purple-600" />
-                        Pending ({readyToCheckIn.length})
-                      </h3>
-                      <div className="space-y-2">
-                        {readyToCheckIn.slice(0, 10).map((wristband) => (
-                          <div
-                            key={wristband.id}
-                            className="p-3 bg-gray-50 border border-gray-200 rounded-lg hover:shadow-md transition-all cursor-pointer"
-                          >
-                            <p className="font-mono text-xs font-semibold text-gray-700">{wristband.wristbandCode}</p>
-                            <Badge variant="secondary" className="mt-1 text-xs">
-                              Pending
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Success Animation Overlay */}
       {showSuccessAnimation && lastCheckedInAttendee && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in">
-          <div className="bg-white rounded-3xl p-12 max-w-md mx-4 text-center shadow-2xl animate-in zoom-in">
-            <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-in zoom-in">
-              <CheckCircle className="w-16 h-16 text-white" />
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl animate-in zoom-in">
+            <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-12 h-12 text-white" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Check-in Berhasil!</h2>
-            <p className="text-gray-600 mb-4">
-              {lastCheckedInAttendee.assignedTicket?.attendee?.fullName || 'Peserta'}
-            </p>
-            <div className="bg-gray-50 rounded-xl p-4 mb-4">
-              <p className="text-sm text-gray-600 mb-1">Ticket Code</p>
-              <p className="font-mono font-bold text-lg text-gray-900">{lastCheckedInAttendee.ticketCode}</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">Check-in Berhasil!</h2>
+
+            {/* Attendee Info */}
+            <div className="bg-gray-50 rounded-xl p-4 my-4 text-left">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <User className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-700">{lastCheckedInAttendee.fullName}</p>
+                  <p className="text-sm text-gray-500">Peserta</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-gray-500">Tiket</p>
+                  <p className="font-medium text-gray-900">{lastCheckedInAttendee.ticketCode}</p>
+                </div>
+                {lastCheckedInAttendee.ticketType && (
+                  <div>
+                    <p className="text-xs text-gray-500">Tipe</p>
+                    <p className="font-medium text-gray-900">{lastCheckedInAttendee.ticketType}</p>
+                  </div>
+                )}
+                {lastCheckedInAttendee.email && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="font-medium text-gray-900 truncate">{lastCheckedInAttendee.email}</p>
+                  </div>
+                )}
+                {lastCheckedInAttendee.phoneNumber && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-gray-500">No. HP</p>
+                    <p className="font-medium text-gray-900">{lastCheckedInAttendee.phoneNumber}</p>
+                  </div>
+                )}
+              </div>
             </div>
-            <p className="text-sm text-gray-500">
-              {lastCheckedInAttendee.checkedInAt ? format(new Date(lastCheckedInAttendee.checkedInAt), 'dd MMM yyyy, HH:mm:ss', { locale: id }) : format(new Date(), 'dd MMM yyyy, HH:mm:ss', { locale: id })}
-            </p>
+
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <Clock className="w-4 h-4" />
+              <span>
+                {format(new Date(lastCheckedInAttendee.checkedInAt), 'dd MMM yyyy, HH:mm:ss', { locale: id })}
+              </span>
+            </div>
+
+            <button
+              onClick={() => setShowSuccessAnimation(false)}
+              className="mt-6 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+            >
+              Tutup
+            </button>
           </div>
         </div>
       )}
