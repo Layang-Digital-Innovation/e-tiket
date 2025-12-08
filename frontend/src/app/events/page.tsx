@@ -134,7 +134,7 @@ function EventPublicCard({ event }: { event: Event }) {
             {event.title}
           </h3>
           
-          <p className="text-gray-700 text-sm mb-4 line-clamp-2 flex-1">
+          <p className="text-gray-700 text-sm mb-4 line-clamp-2">
             {stripHtml(event.description)}
           </p>
 
