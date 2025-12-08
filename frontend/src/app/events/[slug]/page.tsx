@@ -184,6 +184,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
                       src={event.imageUrl}
                       alt={event.title}
                       fill
+                      unoptimized={true}
                       className="object-contain rounded-lg"
                     />
                   ) : null}
