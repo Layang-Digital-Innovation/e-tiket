@@ -154,6 +154,7 @@ export default async function Home() {
                         alt={video.title}
                         width={480}
                         height={270}
+                        unoptimized={true}
                         className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                       />
                     </div>
