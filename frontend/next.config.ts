@@ -23,7 +23,6 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'naikkellas.com',
-        port: '',
         pathname: "/api/uploads/**" 
       },
       // Third-party image sources
