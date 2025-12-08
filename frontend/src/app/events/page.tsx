@@ -12,7 +12,7 @@ import Image from 'next/image';
 export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('published');
-  
+
   const { data, isLoading, error } = useEvents({
     page: 1,
     limit: 20,
@@ -36,7 +36,7 @@ export default function EventsPage() {
             <p className="text-xl text-gray-300 mb-8">
               Jelajahi berbagai event menarik dan dapatkan tiket Anda sekarang
             </p>
-            
+
             {/* Search Bar */}
             <div className="w-full max-w-full md:max-w-2xl">
               <div className="relative">
@@ -84,7 +84,7 @@ export default function EventsPage() {
                   {filteredEvents.length} Event Tersedia
                 </h2>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredEvents.map((event: Event) => (
                   <EventPublicCard key={event.id} event={event} />
@@ -114,6 +114,7 @@ function EventPublicCard({ event }: { event: Event }) {
               height={500}
               src={event.imageUrl}
               alt={event.title}
+              unoptimized={true}
               className="w-full h-full object-cover"
             />
           ) : (
@@ -133,7 +134,7 @@ function EventPublicCard({ event }: { event: Event }) {
           <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">
             {event.title}
           </h3>
-          
+
           <p className="text-gray-700 text-sm mb-4 line-clamp-2">
             {stripHtml(event.description)}
           </p>
