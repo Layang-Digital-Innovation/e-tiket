@@ -180,11 +180,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ slug: st
               <div className="mt-8 lg:mt-0">
                 <div className="bg-black/5 backdrop-blur-sm rounded-lg relative overflow-hidden aspect-video flex items-center justify-center">
                   {event?.imageUrl ? (
-                    <Image
+                    <img
                       src={event.imageUrl}
                       alt={event.title}
-                      fill
-                      unoptimized={true}
                       className="object-contain rounded-lg"
                     />
                   ) : null}
