@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic';
-
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
@@ -28,6 +26,12 @@ export default async function Home() {
   const apiKey = process.env.YOUTUBE_API_KEY;
   const channelId = process.env.YOUTUBE_CHANNEL_ID_NAIK_KELLAS;
 
+  console.log("YouTube Config Check:", {
+    hasApiKey: !!apiKey,
+    hasChannelId: !!channelId,
+    timestamp: new Date().toISOString(),
+  });
+
   let youtubeVideos: { id: string; title: string }[] = [];
 
   if (apiKey && channelId) {
@@ -43,10 +47,19 @@ export default async function Home() {
           id: item.id.videoId,
           title: item.snippet?.title ?? "",
         }));
+      } else {
+        console.error("YouTube API Error:", {
+          status: res.status,
+          statusText: res.statusText,
+        });
+        const errorBody = await res.text();
+        console.error("YouTube API Error Body:", errorBody);
       }
     } catch (error) {
-      // silent fail, will show fallback section
+      console.error("YouTube API Fetch Exception:", error);
     }
+  } else {
+    console.warn("YouTube API credentials missing in environment variables");
   }
 
   return (

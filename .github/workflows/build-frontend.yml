@@ -31,3 +31,5 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
             NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
+            YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY }}
+            YOUTUBE_CHANNEL_ID_NAIK_KELLAS=${{ secrets.YOUTUBE_CHANNEL_ID_NAIK_KELLAS }}
