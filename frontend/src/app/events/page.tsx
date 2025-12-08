@@ -109,12 +109,12 @@ function EventPublicCard({ event }: { event: Event }) {
         {/* Event Image */}
         <div className="h-48 bg-gradient-to-br from-gray-900 to-gray-700 relative overflow-hidden">
           {event.imageUrl ? (
-            <Image
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               width={500}
               height={500}
               src={event.imageUrl}
               alt={event.title}
-              unoptimized={true}
               className="w-full h-full object-cover"
             />
           ) : (
